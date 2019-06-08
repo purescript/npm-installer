@@ -366,7 +366,7 @@ installPurescript({
 	rename: () => argv.name,
 	version: argv['purs-ver'],
 	headers: {
-		'user-agent': 'install-purescript-cli (https://github.com/shinnn/install-purescript-cli)'
+		'user-agent': 'purescript-installer (https://github.com/purescript/npm-installer)'
 	}
 }).subscribe({
 	next(event) {
