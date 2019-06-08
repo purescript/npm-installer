@@ -1,12 +1,6 @@
-# install-purescript-cli
-
-[![npm version](https://img.shields.io/npm/v/install-purescript-cli.svg)](https://www.npmjs.com/package/install-purescript-cli)
-[![Build Status](https://travis-ci.com/shinnn/install-purescript-cli.svg?branch=master)](https://travis-ci.com/shinnn/install-purescript-cli)
-[![codecov](https://codecov.io/gh/shinnn/install-purescript-cli/branch/master/graph/badge.svg)](https://codecov.io/gh/shinnn/install-purescript-cli)
+# purescript-installer
 
 A command-line tool to install [PureScript](https://github.com/purescript/purescript) to the current working directory
-
-![Screencast](./media/screencast.gif)
 
 1. First, it checks if a PureScript binary has been already cached in a disk, and restores that if available
 2. The second plan: if no cache is available, it downloads a prebuilt binary from [the PureScript release page](https://github.com/purescript/purescript/releases).
@@ -19,7 +13,7 @@ A command-line tool to install [PureScript](https://github.com/purescript/puresc
 [Use](https://docs.npmjs.com/cli/install) [npm](https://docs.npmjs.com/about-npm/).
 
 ```
-npm install install-purescript-cli
+npm install purescript-installer
 ```
 
 ## CLI
