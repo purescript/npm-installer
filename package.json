@@ -1,8 +1,10 @@
 {
-  "name": "purescript-npm-installer",
+  "name": "purescript-installer",
   "version": "1.0.0",
   "description": "Installs the PureScript compiler",
-  "main": "index.js",
+  "bin": {
+    "install-purescript": "index.js"
+  },
   "engines": {
     "node": ">=10.0.0"
   },
