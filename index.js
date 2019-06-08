@@ -1,0 +1,506 @@
+#!/usr/bin/env node
+'use strict';
+
+const {dirname, resolve} = require('path');
+const {stat} = require('fs').promises;
+
+const chalk = require('chalk');
+
+const isPrettyMode = process.stdout && process.stdout.isTTY && !/^1|true$/ui.test(process.env.CI) && !process.env.GITHUB_ACTION;
+chalk.enabled = chalk.enabled && isPrettyMode;
+
+const filesize = require('filesize');
+const getCacheInfo = require('npcache').get.info;
+const logUpdate = require('log-update');
+const logSymbols = require('log-symbols');
+const minimist = require('minimist');
+const ms = require('ms');
+const neatStack = require('neat-stack');
+const once = require('once');
+const platformName = require('platform-name');
+const SizeRate = require('size-rate');
+const tildePath = require('tilde-path');
+const ttyTruncate = require('tty-truncate');
+const ttyWidthFrame = require('tty-width-frame');
+const verticalMeter = require('vertical-meter');
+
+const installPurescript = require('./install-purescript/index.js');
+
+const {blue, cyan, dim, magenta, red, strikethrough, underline, yellow} = chalk;
+
+const failure = `${logSymbols.error} `;
+const info = isPrettyMode ? `${logSymbols.info} ` : '';
+const success = `${logSymbols.success} `;
+const warning = `${logSymbols.warning} `;
+const defaultBinName = `purs${process.platform === 'win32' ? '.exe' : ''}`;
+const stackArgs = [];
+const filesizeOptions = {
+	base: 10,
+	round: 2,
+	standard: 'iec'
+};
+const argv = minimist(process.argv.slice(2), {
+	boolean: [
+		'help',
+		'version'
+	],
+	string: [
+		'name',
+		'purs-ver'
+	],
+	default: {
+		'purs-ver': '0.13.0'
+	},
+	unknown(flag) {
+		if (!installPurescript.supportedBuildFlags.has(flag)) {
+			return;
+		}
+
+		stackArgs.push(flag);
+	}
+});
+
+if (argv.help) {
+	console.log(`install-purescript v${require('./package.json').version}
+Install PureScript to the current working directory
+
+Usage:
+install-purescript [options]
+
+Options:
+--purs-ver <string> Specify PureScript version
+                        Default: ${installPurescript.defaultVersion}
+--name     <string> Change a binary name
+                        Default: 'purs.exe' on Windows, 'purs' on others
+                        Or, if the current working directory contains package.json
+                        with \`bin\` field specifying a path of \`purs\` command,
+                        this option defaults to its value
+--help,             Print usage information
+--version           Print version
+
+Also, these flags are passed to \`stack install\` command if provided:
+${[...installPurescript.supportedBuildFlags].join('\n')}
+`);
+
+	process.exit();
+}
+
+if (argv.version) {
+	console.log(require('./package.json').version);
+	process.exit();
+}
+
+if (!argv.name) {
+	try {
+		const {purs} = require(resolve('package.json')).bin;
+
+		argv.name = purs !== undefined ? purs : defaultBinName;
+	} catch {
+		argv.name = defaultBinName;
+	}
+}
+
+const platform = platformName();
+
+class TaskGroup extends Map {
+	constructor(iterable) {
+		super(iterable);
+
+		const pairs = [...this.entries()];
+
+		for (const [index, [_, task]] of pairs.entries()) {
+			if (index < pairs.length - 1) {
+				task.nextTask = pairs[index + 1][1];
+			}
+		}
+	}
+}
+
+const taskGroups = [
+	new TaskGroup([
+		[
+			'search-cache',
+			{
+				head: ''
+			}
+		]
+	]),
+	new TaskGroup([
+		[
+			'restore-cache',
+			{
+				head: `Restore the cached ${cyan(argv['purs-ver'])} binary for ${platform}`
+			}
+		],
+		[
+			'check-binary',
+			{
+				head: 'Verify the restored binary works correctly'
+			}
+		]
+	]),
+	new TaskGroup([
+		[
+			'head',
+			{
+				head: `Check if a prebuilt ${cyan(argv['purs-ver'])} binary is provided for ${platform}`,
+				status: 'processing'
+			}
+		],
+		[
+			'download-binary',
+			{
+				head: 'Download the prebuilt PureScript binary',
+				byteFormatter: null
+			}
+		],
+		[
+			'check-binary',
+			{
+				head: 'Verify the prebuilt binary works correctly'
+			}
+		],
+		[
+			'write-cache',
+			{
+				head: 'Save the downloaded binary to the npm cache directory',
+				allowFailure: true
+			}
+		]
+	]),
+	new TaskGroup([
+		[
+			'check-stack',
+			{
+				head: 'Check if \'stack\' command is available',
+				status: 'processing',
+				noClear: true
+			}
+		],
+		[
+			'download-source',
+			{
+				head: `Download the PureScript ${cyan(argv['purs-ver'])} source`,
+				status: 'processing',
+				byteFormatter: null
+			}
+		],
+		[
+			'setup',
+			{
+				head: 'Ensure the appropriate GHC is installed'
+			}
+		],
+		[
+			'build',
+			{
+				head: 'Build a binary from source'
+			}
+		],
+		[
+			'write-cache',
+			{
+				head: 'Save the built binary to the npm cache directory',
+				allowFailure: true
+			}
+		]
+	])
+];
+
+const path = resolve(argv.name);
+const spinnerFrames = [4, 18, 50, 49, 53, 45, 31, 32, 0, 8].map(code => String.fromCharCode(10247 + code));
+let time = Date.now();
+let frame = 0;
+let loop = 0;
+let cacheWritten = false;
+const render = isPrettyMode ? () => {
+	const lines = [];
+
+	for (const [taskName, {allowFailure, byteFormatter, duration, head, message, status, subhead}] of taskGroups[0]) {
+		let willEnd = false;
+
+		if (status === 'done' || status === 'failed') {
+			const timeInfo = ` (${ms(duration)})`;
+			let mark;
+
+			if (status === 'done') {
+				mark = success;
+			} else if (allowFailure) {
+				mark = warning;
+			} else {
+				mark = failure;
+			}
+
+			if (process.stdout.columns > head.length + timeInfo.length + 2 && duration >= 100) {
+				lines.push(ttyTruncate(`${mark}${head}${dim.gray(timeInfo)}`));
+			} else {
+				lines.push(ttyTruncate(`${mark}${head}`));
+			}
+
+			willEnd = true;
+		} else if (status === 'processing') {
+			lines.push(ttyTruncate(`${yellow(spinnerFrames[Math.floor(frame)])} ${head}`));
+		} else if (status === 'skipped') {
+			lines.push(ttyTruncate(`${yellow('▬')} ${strikethrough(head)}`));
+			willEnd = true;
+		} else {
+			lines.push(ttyTruncate(`  ${head}`));
+		}
+
+		if (subhead) {
+			lines.push(ttyTruncate(dim(`  ${subhead}`)));
+		}
+
+		if (message) {
+			if (status === 'failed') {
+				lines.push(`${red(`  ${message.replace(/^[ \t]+/u, '')}`)}`);
+			} else {
+				lines.push(ttyTruncate(dim(`  ${
+					byteFormatter ? `⢸${verticalMeter(byteFormatter.bytes / byteFormatter.max)}⡇ ` : ''
+				}${message}`)));
+			}
+		}
+
+		if (willEnd && taskGroups[0].size > 1) {
+			taskGroups[0].delete(taskName);
+			logUpdate(`${lines.join('\n')}`);
+			logUpdate.done();
+			lines.splice(0);
+		}
+	}
+
+	logUpdate(`${lines.join('\n')}\n`);
+} : () => {
+	for (const [taskName, {allowFailure, duration, message, status, head}] of taskGroups[0]) {
+		if (status !== 'done' && status !== 'failed') {
+			continue;
+		}
+
+		const durationStr = duration < 100 ? '' : ` (${ms(duration)})`;
+
+		if (status === 'done') {
+			console.log(`[ SUCCESS ] ${head}${durationStr}`);
+		} else {
+			console.log(`[ ${allowFailure ? 'WARNING' : 'FAILURE'} ] ${head}${durationStr}`);
+			console.log(`${message}\n`);
+		}
+
+		taskGroups[0].delete(taskName);
+	}
+};
+
+const initialize = once(firstEvent => {
+	if (firstEvent.id === 'search-cache' && firstEvent.found) {
+		console.log(`${info}Found a cache at ${magenta(tildePath(dirname(firstEvent.path)))}\n`);
+	}
+
+	if (!isPrettyMode) {
+		return;
+	}
+
+	loop = setInterval(() => {
+		frame += 0.5;
+
+		if (frame === spinnerFrames.length) {
+			frame = 0;
+		}
+
+		render();
+	}, 40);
+});
+
+function calcDuration(task) {
+	const newTime = Date.now();
+
+	task.duration = newTime - time;
+	time = newTime;
+}
+
+function getCurrentTask(currentId) {
+	while (!taskGroups[0].has(currentId)) {
+		taskGroups.shift();
+	}
+
+	return taskGroups[0].get(currentId);
+}
+
+function showError(erroredTask, err) {
+	const showLongMessage = isPrettyMode ? ttyWidthFrame : str => str.replace(/(?:\r?\n)+/ug, ' ');
+	// https://github.com/nodejs/node/blob/v12.0.0/lib/child_process.js#L310
+	// https://github.com/sindresorhus/execa/blob/4692dcd4cec9097ded284ed6f9a71666bd560564/index.js#L167
+	const erroredCommand = err.command || err.cmd;
+
+	erroredTask.status = 'failed';
+
+	if (!erroredTask.subhead && erroredCommand) {
+		erroredTask.subhead = erroredCommand;
+	}
+
+	if (err.code === 'ERR_UNSUPPORTED_PLATFORM' || err.code === 'ERR_UNSUPPORTED_ARCH') {
+		const environment = err.code === 'ERR_UNSUPPORTED_PLATFORM' ? platform : `${err.currentArch} architecture`;
+
+		erroredTask.message = showLongMessage(`Prebuilt PureScript binary is not provided for ${environment}.
+
+Although this program still tries to install PureScript by compiling the source code, it will take much, so much more time to finish than just downloading a prebuilt one.
+
+To make installation faster on ${environment}, submit a new issue "Provide a prebuilt binary for ${environment}" to ${underline('https://github.com/purescript/purescript/issues/new')} unless it already exists.`);
+	} else if (err.INSTALL_URL) {
+		erroredTask.message = showLongMessage(`${'\'stack\' command is required for building PureScript from source, ' +
+      'but it\'s not found in your PATH. Make sure you have installed Stack and try again.\n\n' +
+      '→ '}${underline(err.INSTALL_URL)}`);
+	} else {
+		erroredTask.message = neatStack(err);
+	}
+
+	calcDuration(erroredTask);
+
+	for (const task of taskGroups[0].values()) {
+		if (task.status !== 'done' && task.status !== 'failed') {
+			task.status = 'skipped';
+		}
+	}
+}
+
+installPurescript({
+	args: stackArgs,
+	rename: () => argv.name,
+	version: argv['purs-ver'],
+	headers: {
+		'user-agent': 'install-purescript-cli (https://github.com/shinnn/install-purescript-cli)'
+	}
+}).subscribe({
+	next(event) {
+		initialize(event);
+
+		const task = getCurrentTask(event.id.replace(/:.*$/u, ''));
+
+		if (event.id.endsWith(':fail')) {
+			showError(task, event.error);
+			render();
+
+			if (task.allowFailure) {
+				return;
+			}
+
+			if (isPrettyMode) {
+				logUpdate.done();
+			}
+
+			taskGroups.shift();
+			console.log(`${blue('↓')} ${taskGroups.length === 2 ? 'Reinstall a binary since the cache is broken' : 'Fallback: building from source'}\n`);
+
+			return;
+		}
+
+		if (event.id.endsWith(':complete')) {
+			task.status = 'done';
+			calcDuration(task);
+
+			if (!task.noClear) {
+				task.subhead = '';
+				task.message = '';
+			}
+
+			if (task.nextTask && !task.nextTask.status) {
+				task.nextTask.status = 'processing';
+			}
+
+			if (event.id === 'write-cache:complete') {
+				cacheWritten = true;
+			}
+
+			render();
+			return;
+		}
+
+		if (!isPrettyMode) {
+			if (event.output !== undefined) {
+				if (!task.subhead) {
+					task.subhead = event.command;
+					console.log(`[ RUNNING ] command: ${task.subhead}`);
+				}
+
+				console.log(`  ${event.output}`);
+			}
+
+			return;
+		}
+
+		if (event.output !== undefined) {
+			task.status = 'processing';
+			task.subhead = event.command;
+			task.message = event.output;
+
+			return;
+		}
+
+		if (event.id === 'download-binary') {
+			task.subhead = event.response.url;
+			task.status = 'processing';
+
+			if (!task.byteFormatter) {
+				task.byteFormatter = new SizeRate({max: event.entry.size});
+			}
+
+			task.message = task.byteFormatter.format(event.entry.size - event.entry.remain);
+			return;
+		}
+
+		if (event.id === 'download-source') {
+			task.subhead = event.response.url;
+			task.status = 'processing';
+
+			if (event.entry.header.size !== 0) {
+				task.byteFormatter = new SizeRate({max: event.entry.size});
+				task.message = `${task.byteFormatter.format(event.entry.size - event.entry.remain)} → ${event.entry.path}`;
+			}
+
+			return;
+		}
+
+		if (event.id === 'check-stack') {
+			task.message = `${event.version} found at ${event.path}`;
+			return;
+		}
+
+		if (event.id === 'write-cache') {
+			task.message = `It takes a while to convert the ${filesize(event.originalSize, filesizeOptions)} binary into a few MB cache.`;
+		}
+	},
+	error(err) {
+		clearInterval(loop);
+
+		if (err.id) {
+			const task = getCurrentTask(err.id);
+			showError(task, err);
+			render();
+		} else {
+			console.error(neatStack(err));
+		}
+
+		process.exitCode = 1;
+	},
+	async complete() {
+		render();
+		clearInterval(loop);
+
+		if (isPrettyMode) {
+			logUpdate.done();
+		} else {
+			console.log();
+		}
+
+		const [{size: bytes}, {path: cachePath, size: cacheBytes}] = await Promise.all([
+			stat(path),
+			cacheWritten ? getCacheInfo(installPurescript.cacheKey) : {}
+		]);
+
+		console.log(`Installed to ${magenta(tildePath(path))} ${dim(filesize(bytes, filesizeOptions))}`);
+
+		if (cachePath) {
+			console.log(`Cached to ${magenta(tildePath(dirname(cachePath)))} ${dim(filesize(cacheBytes, filesizeOptions))}`);
+		}
+
+		console.log();
+	}
+});
