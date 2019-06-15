@@ -1,20 +1,21 @@
 'use strict';
 
-const {constants: {BROTLI_PARAM_SIZE_HINT}, brotliCompress, createBrotliDecompress} = require('zlib');
 const {createReadStream, lstat, stat} = require('fs');
 const {execFile} = require('child_process');
-const {join, normalize} = require('path');
+const path = require('path');
 const {promisify} = require('util');
 const {Writable} = require('stream');
 
 const arch = require('arch');
 const {create, Unpack} = require('tar');
-const {get: {info: getCacheInfo}, put: putCache, rm: {entry: removeCache}, tmp: {withTmp}, verify} = require('npcache');
+const npmCachePath = require('npm-cache-path');
+const cacache = require('cacache');
 const inspectWithKind = require('inspect-with-kind');
 const isPlainObj = require('is-plain-obj');
 const Observable = require('zen-observable');
 const pump = require('pump');
 const runInDir = require('run-in-dir');
+const envPaths = require('env-paths');
 
 const downloadOrBuildPurescript = require('../download-or-build-purescript/index.js');
 
@@ -27,6 +28,7 @@ function addId(obj, id) {
 	return obj;
 }
 
+const CACHE_ROOT_DIR = envPaths('purescript-npm-installer').cache;
 const CACHE_KEY = 'install-purescript:binary';
 const MAX_READ_SIZE = 30 * 1024 * 1024;
 const defaultBinName = `purs${process.platform === 'win32' ? '.exe' : ''}`;
@@ -67,22 +69,22 @@ module.exports = function installPurescript(...args) {
 			}
 		}
 
-		const binName = typeof options.rename === 'function' ? normalize(`${options.rename(defaultBinName)}`) : defaultBinName;
+		const binName = typeof options.rename === 'function' ? path.normalize(`${options.rename(defaultBinName)}`) : defaultBinName;
 		const cwd = process.cwd();
-		const binPath = join(cwd, binName);
+		const binPath = path.join(cwd, binName);
 		const cacheId = `${options.version || downloadOrBuildPurescript.defaultVersion}${cacheIdSuffix}`;
 
 		function main({brokenCacheFound = false} = {}) {
 			const cacheCleaning = (async () => {
 				if (brokenCacheFound) {
 					try {
-						await removeCache(CACHE_KEY);
-					} catch {}
+						await cacache.rm.entry(CACHE_ROOT_DIR, CACHE_KEY);
+					} catch(_) {}
 				}
 
 				try {
-					await verify();
-				} catch {}
+					await cacache.verify(CACHE_ROOT_DIR);
+				} catch(_) {}
 			})();
 
 			runInDir(cwd, () => subscriptions.add(downloadOrBuildPurescript(options).subscribe({
@@ -110,7 +112,7 @@ module.exports = function installPurescript(...args) {
 
 						tarCreateOptions.statCache.set(binPath, binStat);
 						writeCacheValue.originalSize = binStat.size;
-					} catch {}
+					} catch(_) {}
 
 					observer.next(writeCacheValue);
 
@@ -128,7 +130,7 @@ module.exports = function installPurescript(...args) {
 
 								// Ensure the path where the current npm config regards as a cache directory
 								// is actually available, before performing long-running compression
-								await withTmp(async () => {});
+								await cacache.tmp.withTmp(CACHE_ROOT_DIR, async () => {});
 							})()
 						]);
 						const decomressed = await promisify(brotliCompress)(Buffer.concat(tarBuffers, tarSize), {
@@ -179,7 +181,7 @@ module.exports = function installPurescript(...args) {
 
 			try {
 				const [info] = await Promise.all([
-					getCacheInfo(CACHE_KEY),
+					cacache.get.info(CACHE_ROOT_DIR, CACHE_KEY),
 					(async () => {
 						await promisify(setImmediate)();
 						tmpSubscription.unsubscribe();
@@ -198,7 +200,7 @@ module.exports = function installPurescript(...args) {
 				]);
 
 				id = info.metadata.id;
-				cachePath = info.path;
+				cachePath = path.join(CACHE_ROOT_DIR, info.path);
 			} catch (_) {
 				if (observer.closed) {
 					return;

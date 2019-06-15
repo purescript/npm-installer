@@ -6,12 +6,14 @@
     "install-purescript": "index.js"
   },
   "engines": {
-    "node": ">=10.0.0"
+    "node": ">=8.0.0"
   },
   "dependencies": {
     "arch": "^2.1.1",
+    "cacache": "^11.3.2",
     "chalk": "^2.4.2",
     "dl-tar": "^0.8.0",
+    "env-paths": "^2.2.0",
     "feint": "^1.0.3",
     "filesize": "^4.1.2",
     "inspect-with-kind": "^1.0.5",
