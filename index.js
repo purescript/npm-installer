@@ -458,10 +458,6 @@ installPurescript({
 			task.message = `${event.version} found at ${event.path}`;
 			return;
 		}
-
-		if (event.id === 'write-cache') {
-			task.message = `It takes a while to convert the ${filesize(event.originalSize, filesizeOptions)} binary into a few MB cache.`;
-		}
 	},
 	error(err) {
 		clearInterval(loop);

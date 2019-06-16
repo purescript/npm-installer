@@ -1,6 +1,6 @@
 'use strict';
 
-const {createReadStream, lstat, stat} = require('fs');
+const fs = require('fs');
 const {execFile} = require('child_process');
 const path = require('path');
 const {promisify} = require('util');
@@ -96,54 +96,21 @@ module.exports = function installPurescript(...args) {
 					observer.error(err);
 				},
 				async complete() {
-					const writeCacheValue = {id: 'write-cache'};
-					const tarBuffers = [];
-					const tarCreateOptions = {
-						cwd,
-						maxReadSize: MAX_READ_SIZE,
-						noDirRecurse: true,
-						strict: true,
-						statCache: new Map()
-					};
-					let tarSize = 0;
+					observer.next({id: 'write-cache'});
 
 					try {
-						const binStat = await promisify(lstat)(binPath);
-
-						tarCreateOptions.statCache.set(binPath, binStat);
-						writeCacheValue.originalSize = binStat.size;
-					} catch(_) {}
-
-					observer.next(writeCacheValue);
-
-					try {
-						await Promise.all([
-							promisify(pump)(create(tarCreateOptions, [binName]), new Writable({
-								write(data, _, cb) {
-									tarBuffers.push(data);
-									tarSize += data.length;
-									cb();
-								}
-							})),
-							(async () => {
-								await cacheCleaning;
-
-								// Ensure the path where the current npm config regards as a cache directory
-								// is actually available, before performing long-running compression
-								await cacache.tmp.withTmp(CACHE_ROOT_DIR, async () => {});
-							})()
-						]);
-						const decomressed = await promisify(brotliCompress)(Buffer.concat(tarBuffers, tarSize), {
-							params: {
-								[BROTLI_PARAM_SIZE_HINT]: tarSize
-							}
-						});
-						await putCache(CACHE_KEY, decomressed, {
-							size: decomressed.size,
+						await cacheCleaning;
+						const binStat = await promisify(fs.lstat)(binPath);
+						const cacheStream = cacache.put.stream(CACHE_ROOT_DIR, CACHE_KEY, {
+							size: binStat.size,
 							metadata: {
-								id: cacheId
+								id: cacheId,
+								mode: binStat.mode
 							}
 						});
+						await promisify(pump)(
+							fs.createReadStream(binPath),
+							cacheStream);
 					} catch (err) {
 						observer.next({
 							id: 'write-cache:fail',
@@ -178,6 +145,7 @@ module.exports = function installPurescript(...args) {
 			};
 			let id;
 			let cachePath;
+			let binMode;
 
 			try {
 				const [info] = await Promise.all([
@@ -187,20 +155,30 @@ module.exports = function installPurescript(...args) {
 						tmpSubscription.unsubscribe();
 					})(),
 					(async () => {
+						let binStat;
 						try {
-							if ((await promisify(stat)(binPath)).isDirectory()) {
+							binStat = await promisify(fs.stat)(binPath);
+
+							if (binStat.isDirectory()) {
 								const error = new Error(`Tried to create a PureScript binary at ${binPath}, but a directory already exists there.`);
 
 								error.code = 'EISDIR';
 								error.path = binPath;
 								observer.error(error);
+							} else {
+								await promisify(fs.unlink)(binPath);
 							}
-						} catch (_) {}
+						} catch (err) {
+							if (err.code !== 'ENOENT') {
+								throw err;
+							}
+						}
 					})()
 				]);
 
 				id = info.metadata.id;
 				cachePath = path.join(CACHE_ROOT_DIR, info.path);
+				binMode = info.metadata.mode;
 			} catch (_) {
 				if (observer.closed) {
 					return;
@@ -228,29 +206,11 @@ module.exports = function installPurescript(...args) {
 			observer.next({id: 'restore-cache'});
 
 			try {
-				let fileCount = 0;
-
-				await promisify(pump)(createReadStream(cachePath), createBrotliDecompress(), new Unpack({
-					strict: true,
-					cwd,
-					filter(_, entry) {
-						entry.path = binName;
-						entry.header.path = binName;
-						entry.absolute = binPath;
-
-						const isFile = entry.type === 'File';
-
-						fileCount += Number(isFile);
-						return isFile;
-					}
-				}));
-
-				if (fileCount !== 1) {
-					const error = new Error(`Expected a cached PureScript binary archive ${cachePath} contains 1 file, but found ${fileCount}.`);
-
-					error.code = 'EINVALIDCACHE';
-					throw error;
-				}
+				await promisify(pump)(
+					fs.createReadStream(cachePath),
+					fs.createWriteStream(binPath)
+				);
+				await promisify(fs.chmod)(binPath, binMode);
 			} catch (err) {
 				observer.next({
 					id: 'restore-cache:fail',
