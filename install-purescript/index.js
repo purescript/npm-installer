@@ -8,7 +8,6 @@ const {Writable} = require('stream');
 
 const arch = require('arch');
 const {create, Unpack} = require('tar');
-const npmCachePath = require('npm-cache-path');
 const cacache = require('cacache');
 const inspectWithKind = require('inspect-with-kind');
 const isPlainObj = require('is-plain-obj');
