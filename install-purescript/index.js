@@ -177,7 +177,7 @@ module.exports = function installPurescript(...args) {
 				]);
 
 				id = info.metadata.id;
-				cachePath = path.join(CACHE_ROOT_DIR, info.path);
+				cachePath = info.path;
 				binMode = info.metadata.mode;
 			} catch (_) {
 				if (observer.closed) {
