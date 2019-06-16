@@ -12,7 +12,6 @@ chalk.enabled = chalk.enabled && isPrettyMode;
 
 const filesize = require('filesize');
 const cacache = require('cacache');
-const envPaths = require('env-paths');
 const logUpdate = require('log-update');
 const logSymbols = require('log-symbols');
 const minimist = require('minimist');
@@ -27,8 +26,6 @@ const ttyWidthFrame = require('tty-width-frame');
 const verticalMeter = require('vertical-meter');
 
 const installPurescript = require('./install-purescript/index.js');
-
-const CACHE_ROOT_DIR = envPaths('purescript-npm-installer').cache;
 
 const {blue, cyan, dim, magenta, red, strikethrough, underline, yellow} = chalk;
 
@@ -487,7 +484,7 @@ installPurescript({
 
 		const [{size: bytes}, {path: cachePath, size: cacheBytes}] = await Promise.all([
 			promisify(stat)(path),
-			cacheWritten ? cacache.get.info(CACHE_ROOT_DIR, installPurescript.cacheKey) : {}
+			cacheWritten ? cacache.get.info(installPurescript.cacheRootDir, installPurescript.cacheKey) : {}
 		]);
 
 		console.log(`Installed to ${magenta(tildePath(path))} ${dim(filesize(bytes, filesizeOptions))}`);

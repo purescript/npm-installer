@@ -248,6 +248,10 @@ Object.defineProperties(module.exports, {
 		enumerable: true,
 		value: CACHE_KEY
 	},
+	cacheRootDir: {
+		enumerable: true,
+		value: CACHE_ROOT_DIR
+	},
 	defaultVersion: {
 		enumerable: true,
 		value: downloadOrBuildPurescript.defaultVersion
