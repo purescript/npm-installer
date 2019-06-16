@@ -205,12 +205,11 @@ Inherited from [`build-purescript`](https://github.com/shinnn/build-purescript#e
 
 ##### `write-cache`
 
-Fires when it starts to create a cache. The cache is compressed with [Brotli](https://github.com/google/brotli).
+Fires when it starts to create a cache.
 
 ```javascript
 {
   id: 'write-cache',
-  originalSize: <integer> // the size of the binary before compression in bytes
 }
 ```
 
