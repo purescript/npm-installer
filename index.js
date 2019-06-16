@@ -2,7 +2,8 @@
 'use strict';
 
 const {dirname, resolve} = require('path');
-const {stat} = require('fs').promises;
+const {stat} = require('fs');
+const {promisify} = require('util');
 
 const chalk = require('chalk');
 
@@ -10,7 +11,7 @@ const isPrettyMode = process.stdout && process.stdout.isTTY && !/^1|true$/ui.tes
 chalk.enabled = chalk.enabled && isPrettyMode;
 
 const filesize = require('filesize');
-const getCacheInfo = require('npcache').get.info;
+const cacache = require('cacache');
 const logUpdate = require('log-update');
 const logSymbols = require('log-symbols');
 const minimist = require('minimist');
@@ -95,7 +96,7 @@ if (!argv.name) {
 		const {purs} = require(resolve('package.json')).bin;
 
 		argv.name = purs !== undefined ? purs : defaultBinName;
-	} catch {
+	} catch(_) {
 		argv.name = defaultBinName;
 	}
 }
@@ -338,12 +339,7 @@ function showError(erroredTask, err) {
 
 	if (err.code === 'ERR_UNSUPPORTED_PLATFORM' || err.code === 'ERR_UNSUPPORTED_ARCH') {
 		const environment = err.code === 'ERR_UNSUPPORTED_PLATFORM' ? platform : `${err.currentArch} architecture`;
-
-		erroredTask.message = showLongMessage(`Prebuilt PureScript binary is not provided for ${environment}.
-
-Although this program still tries to install PureScript by compiling the source code, it will take much, so much more time to finish than just downloading a prebuilt one.
-
-To make installation faster on ${environment}, submit a new issue "Provide a prebuilt binary for ${environment}" to ${underline('https://github.com/purescript/purescript/issues/new')} unless it already exists.`);
+		erroredTask.message = showLongMessage(`No prebuilt PureScript binary is provided for ${environment}.`);
 	} else if (err.INSTALL_URL) {
 		erroredTask.message = showLongMessage(`${'\'stack\' command is required for building PureScript from source, ' +
       'but it\'s not found in your PATH. Make sure you have installed Stack and try again.\n\n' +
@@ -487,8 +483,8 @@ installPurescript({
 		}
 
 		const [{size: bytes}, {path: cachePath, size: cacheBytes}] = await Promise.all([
-			stat(path),
-			cacheWritten ? getCacheInfo(installPurescript.cacheKey) : {}
+			promisify(stat)(path),
+			cacheWritten ? cacache.get.info(installPurescript.cacheRootDir, installPurescript.cacheKey) : {}
 		]);
 
 		console.log(`Installed to ${magenta(tildePath(path))} ${dim(filesize(bytes, filesizeOptions))}`);
