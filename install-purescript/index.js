@@ -27,7 +27,7 @@ function addId(obj, id) {
 	return obj;
 }
 
-const CACHE_ROOT_DIR = envPaths('purescript-npm-installer').cache;
+const defaultCacheRootDir = envPaths('purescript-npm-installer').cache;
 const CACHE_KEY = 'install-purescript:binary';
 const MAX_READ_SIZE = 30 * 1024 * 1024;
 const defaultBinName = `purs${process.platform === 'win32' ? '.exe' : ''}`;
@@ -72,17 +72,18 @@ module.exports = function installPurescript(...args) {
 		const cwd = process.cwd();
 		const binPath = path.join(cwd, binName);
 		const cacheId = `${options.version || downloadOrBuildPurescript.defaultVersion}${cacheIdSuffix}`;
+		const cacheRootDir = typeof options.cacheRootDir === 'string' ? options.cacheRootDir : defaultCacheRootDir;
 
 		function main({brokenCacheFound = false} = {}) {
 			const cacheCleaning = (async () => {
 				if (brokenCacheFound) {
 					try {
-						await cacache.rm.entry(CACHE_ROOT_DIR, CACHE_KEY);
+						await cacache.rm.entry(cacheRootDir, CACHE_KEY);
 					} catch(_) {}
 				}
 
 				try {
-					await cacache.verify(CACHE_ROOT_DIR);
+					await cacache.verify(cacheRootDir);
 				} catch(_) {}
 			})();
 
@@ -100,7 +101,7 @@ module.exports = function installPurescript(...args) {
 					try {
 						await cacheCleaning;
 						const binStat = await promisify(fs.lstat)(binPath);
-						const cacheStream = cacache.put.stream(CACHE_ROOT_DIR, CACHE_KEY, {
+						const cacheStream = cacache.put.stream(cacheRootDir, CACHE_KEY, {
 							size: binStat.size,
 							metadata: {
 								id: cacheId,
@@ -148,7 +149,7 @@ module.exports = function installPurescript(...args) {
 
 			try {
 				const [info] = await Promise.all([
-					cacache.get.info(CACHE_ROOT_DIR, CACHE_KEY),
+					cacache.get.info(cacheRootDir, CACHE_KEY),
 					(async () => {
 						await promisify(setImmediate)();
 						tmpSubscription.unsubscribe();
@@ -248,9 +249,9 @@ Object.defineProperties(module.exports, {
 		enumerable: true,
 		value: CACHE_KEY
 	},
-	cacheRootDir: {
+	defaultCacheRootDir: {
 		enumerable: true,
-		value: CACHE_ROOT_DIR
+		value: defaultCacheRootDir
 	},
 	defaultVersion: {
 		enumerable: true,
