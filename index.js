@@ -484,7 +484,7 @@ installPurescript({
 
 		const [{size: bytes}, {path: cachePath, size: cacheBytes}] = await Promise.all([
 			promisify(stat)(path),
-			cacheWritten ? cacache.get.info(installPurescript.cacheRootDir, installPurescript.cacheKey) : {}
+			cacheWritten ? cacache.get.info(installPurescript.defaultCacheRootDir, installPurescript.cacheKey) : {}
 		]);
 
 		console.log(`Installed to ${magenta(tildePath(path))} ${dim(filesize(bytes, filesizeOptions))}`);
