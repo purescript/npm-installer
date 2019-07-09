@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "arch": "^2.1.1",
+    "byline": "^5.0.0",
     "cacache": "^11.3.2",
     "cancelable-pump": "^0.4.0",
     "chalk": "^2.4.2",
@@ -28,7 +29,6 @@
     "rimraf": "^2.6.3",
     "size-rate": "^0.3.1",
     "tar": "^4.4.6",
-    "tilde-path": "^3.0.0",
     "tty-truncate": "^1.0.3",
     "tty-width-frame": "^1.0.2",
     "vertical-meter": "^1.0.0",

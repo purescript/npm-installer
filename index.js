@@ -18,7 +18,6 @@ const minimist = require('minimist');
 const ms = require('ms');
 const once = require('once');
 const SizeRate = require('size-rate');
-const tildePath = require('tilde-path');
 const ttyTruncate = require('tty-truncate');
 const ttyWidthFrame = require('tty-width-frame');
 const verticalMeter = require('vertical-meter');
@@ -288,7 +287,7 @@ const render = isPrettyMode ? () => {
 
 const initialize = once(firstEvent => {
 	if (firstEvent.id === 'search-cache' && firstEvent.found) {
-		console.log(`${info}Found a cache at ${magenta(tildePath(dirname(firstEvent.path)))}\n`);
+		console.log(`${info}Found a cache at ${magenta(dirname(firstEvent.path))}\n`);
 	}
 
 	if (!isPrettyMode) {
@@ -483,10 +482,10 @@ installPurescript({
 			cacheWritten ? cacache.get.info(installPurescript.defaultCacheRootDir, installPurescript.cacheKey) : {}
 		]);
 
-		console.log(`Installed to ${magenta(tildePath(path))} ${dim(filesize(bytes, filesizeOptions))}`);
+		console.log(`Installed to ${magenta(path)} ${dim(filesize(bytes, filesizeOptions))}`);
 
 		if (cachePath) {
-			console.log(`Cached to ${magenta(tildePath(dirname(cachePath)))} ${dim(filesize(cacheBytes, filesizeOptions))}`);
+			console.log(`Cached to ${magenta(dirname(cachePath))} ${dim(filesize(cacheBytes, filesizeOptions))}`);
 		}
 
 		console.log();
