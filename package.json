@@ -1,6 +1,6 @@
 {
   "name": "purescript-installer",
-  "version": "0.2.1",
+  "version": "0.2.3",
   "description": "Installs the PureScript compiler",
   "bin": {
     "install-purescript": "index.js"
@@ -11,8 +11,8 @@
   "dependencies": {
     "arch": "^2.1.1",
     "cacache": "^11.3.2",
+    "cancelable-pump": "^0.4.0",
     "chalk": "^2.4.2",
-    "dl-tar": "^0.8.0",
     "env-paths": "^2.2.0",
     "feint": "^1.0.3",
     "filesize": "^4.1.2",
@@ -32,6 +32,7 @@
     "run-in-dir": "^0.3.0",
     "size-rate": "^0.3.1",
     "spawn-stack": "^0.7.0",
+    "tar": "^4.4.6",
     "tilde-path": "^3.0.0",
     "tty-truncate": "^1.0.3",
     "tty-width-frame": "^1.0.2",

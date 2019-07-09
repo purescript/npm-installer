@@ -2,7 +2,7 @@
 
 const {extname, basename, join, sep} = require('path');
 
-const dlTar = require('dl-tar');
+const dlTar = require('../dl-tar/index.js');
 const inspectWithKind = require('inspect-with-kind');
 const isPlainObj = require('is-plain-obj');
 const Observable = require('zen-observable');
