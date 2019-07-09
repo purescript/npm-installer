@@ -5,14 +5,11 @@ const {inspect, promisify} = require('util');
 const {rename, stat} = require('fs');
 const {basename, join} = require('path');
 
-const feint = require('feint');
-const inspectWithKind = require('inspect-with-kind');
+const feint = require('../feint/index.js');
 const isPlainObj = require('is-plain-obj');
 const Observable = require('zen-observable');
 const once = require('once');
-const {pause, resume} = require('pause-methods');
-const runInDir = require('run-in-dir');
-const spawnStack = require('spawn-stack');
+const spawnStack = require('../spawn-stack/index.js');
 const which = require('which');
 
 const buildPurescript = require('../build-purescript/index.js');
@@ -50,13 +47,13 @@ module.exports = function downloadOrBuildPurescript(...args) {
 		if (argLen === 1) {
 			if (!isPlainObj(options)) {
 				throw new TypeError(`Expected an object to specify options of install-purescript, but got ${
-					inspectWithKind(options)
+					inspect(options)
 				}.`);
 			}
 
 			if (options.rename !== undefined && typeof options.rename !== 'function') {
 				throw new TypeError(`\`rename\` option must be a function, but ${
-					inspectWithKind(options.rename)
+					inspect(options.rename)
 				} was provided.`);
 			}
 
@@ -75,7 +72,7 @@ module.exports = function downloadOrBuildPurescript(...args) {
 
 		if (typeof binName !== 'string') {
 			throw new TypeError(`Expected \`rename\` option to be a function that returns a string, but returned ${
-				inspectWithKind(binName)
+				inspect(binName)
 			}.`);
 		}
 
@@ -107,7 +104,7 @@ module.exports = function downloadOrBuildPurescript(...args) {
 			observer.next(stackCheckResult);
 			observer.next({id: 'check-stack:complete'});
 
-			runInDir(cwd, () => subscriptions.add(buildPurescript(buildOptions).subscribe({
+			subscriptions.add(buildPurescript(buildOptions).subscribe({
 				next(progress) {
 					if (progress.id === 'build:complete') {
 						// No need to check `join(cwd, initialBinName) !== binPath`, because:
@@ -134,7 +131,7 @@ module.exports = function downloadOrBuildPurescript(...args) {
 				error(err) {
 					sendError(err, err.id.replace('download', 'download-source'));
 				}
-			})));
+			}));
 		});
 
 		const startBuildIfNeeded = () => {
@@ -157,7 +154,7 @@ module.exports = function downloadOrBuildPurescript(...args) {
 			startBuildIfNeeded();
 		});
 
-		const downloadObserver = pause({
+		const downloadObserver = {
 			next(progress) {
 				progress.id = 'download-binary';
 				observer.next(progress);
@@ -198,7 +195,7 @@ module.exports = function downloadOrBuildPurescript(...args) {
 				observer.next({id: 'check-binary:complete'});
 				observer.complete();
 			}
-		});
+		};
 
 		const completeHead = feint(once(() => {
 			observer.next({id: 'head:complete'});
@@ -247,7 +244,6 @@ module.exports = function downloadOrBuildPurescript(...args) {
 			}
 
 			observer.next({id: 'head'});
-			resume(downloadObserver);
 			completeHead();
 		})();
 

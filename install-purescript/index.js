@@ -3,17 +3,15 @@
 const fs = require('fs');
 const {execFile} = require('child_process');
 const path = require('path');
-const {promisify} = require('util');
+const {inspect, promisify} = require('util');
 const {Writable} = require('stream');
 
 const arch = require('arch');
 const {create, Unpack} = require('tar');
 const cacache = require('cacache');
-const inspectWithKind = require('inspect-with-kind');
 const isPlainObj = require('is-plain-obj');
 const Observable = require('zen-observable');
 const pump = require('pump');
-const runInDir = require('run-in-dir');
 const envPaths = require('env-paths');
 
 const downloadOrBuildPurescript = require('../download-or-build-purescript/index.js');
@@ -49,13 +47,13 @@ module.exports = function installPurescript(...args) {
 		if (args.length === 1) {
 			if (!isPlainObj(options)) {
 				throw new TypeError(`Expected an object to set install-purescript options, but got ${
-					inspectWithKind(options)
+					inspect(options)
 				}.`);
 			}
 
 			if (options.forceReinstall !== undefined && typeof options.forceReinstall !== 'boolean') {
 				throw new TypeError(`Expected \`forceReinstall\` option to be a Boolean value, but got ${
-					inspectWithKind(options.forceReinstall)
+					inspect(options.forceReinstall)
 				}.`);
 			}
 		}
@@ -87,7 +85,7 @@ module.exports = function installPurescript(...args) {
 				} catch(_) {}
 			})();
 
-			runInDir(cwd, () => subscriptions.add(downloadOrBuildPurescript(options).subscribe({
+			subscriptions.add(downloadOrBuildPurescript(options).subscribe({
 				next(val) {
 					observer.next(val);
 				},
@@ -124,7 +122,7 @@ module.exports = function installPurescript(...args) {
 					observer.next({id: 'write-cache:complete'});
 					observer.complete();
 				}
-			})));
+			}));
 		}
 
 		if (options.forceReinstall) {

@@ -1,9 +1,9 @@
 'use strict';
 
+const util = require('util');
 const {extname, basename, join, sep} = require('path');
 
 const dlTar = require('../dl-tar/index.js');
-const inspectWithKind = require('inspect-with-kind');
 const isPlainObj = require('is-plain-obj');
 const Observable = require('zen-observable');
 
@@ -63,7 +63,7 @@ module.exports = function downloadPurescriptSource(...args) {
 	if (typeof dir !== 'string') {
 		return new Observable(observer => {
 			observer.error(new TypeError(`Expected a directory path where PureScript source will be extracted, but got a non-string value ${
-				inspectWithKind(dir)
+				util.inspect(dir)
 			}.`));
 		});
 	}
@@ -75,7 +75,7 @@ module.exports = function downloadPurescriptSource(...args) {
 	if (!isPlainObj(options)) {
 		return new Observable(observer => {
 			observer.error(new TypeError(`Expected download-purescript-source option to be an object, but got ${
-				inspectWithKind(options)
+				util.inspect(options)
 			}.`));
 		});
 	}
@@ -85,7 +85,7 @@ module.exports = function downloadPurescriptSource(...args) {
 	if (rev !== undefined) {
 		if (typeof rev !== 'string') {
 			return new Observable(observer => {
-				observer.error(new TypeError(`${REV_ERROR}, but got a non-string value ${inspectWithKind(rev)}.`));
+				observer.error(new TypeError(`${REV_ERROR}, but got a non-string value ${util.inspect(rev)}.`));
 			});
 		}
 
@@ -99,7 +99,7 @@ module.exports = function downloadPurescriptSource(...args) {
 	if (options.strip !== undefined && options.strip !== 1) {
 		return new Observable(observer => {
 			observer.error(new Error(`\`strip\` option is unchangeable, but ${
-				inspectWithKind(options.strip)
+				util.inspect(options.strip)
 			} was provided.`));
 		});
 	}

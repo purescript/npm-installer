@@ -16,14 +16,7 @@ const logUpdate = require('log-update');
 const logSymbols = require('log-symbols');
 const minimist = require('minimist');
 const ms = require('ms');
-const neatStack = require('neat-stack');
 const once = require('once');
-const platformName = require('platform-name');
-const SizeRate = require('size-rate');
-const tildePath = require('tilde-path');
-const ttyTruncate = require('tty-truncate');
-const ttyWidthFrame = require('tty-width-frame');
-const verticalMeter = require('vertical-meter');
 
 const installPurescript = require('./install-purescript/index.js');
 
@@ -101,8 +94,6 @@ if (!argv.name) {
 	}
 }
 
-const platform = platformName();
-
 class TaskGroup extends Map {
 	constructor(iterable) {
 		super(iterable);
@@ -130,7 +121,7 @@ const taskGroups = [
 		[
 			'restore-cache',
 			{
-				head: `Restore the cached ${cyan(argv['purs-ver'])} binary for ${platform}`
+				head: `Restore the cached ${cyan(argv['purs-ver'])} binary for ${process.platform}`
 			}
 		],
 		[
@@ -144,15 +135,14 @@ const taskGroups = [
 		[
 			'head',
 			{
-				head: `Check if a prebuilt ${cyan(argv['purs-ver'])} binary is provided for ${platform}`,
+				head: `Check if a prebuilt ${cyan(argv['purs-ver'])} binary is provided for ${process.platform}`,
 				status: 'processing'
 			}
 		],
 		[
 			'download-binary',
 			{
-				head: 'Download the prebuilt PureScript binary',
-				byteFormatter: null
+				head: 'Download the prebuilt PureScript binary'
 			}
 		],
 		[
@@ -182,8 +172,7 @@ const taskGroups = [
 			'download-source',
 			{
 				head: `Download the PureScript ${cyan(argv['purs-ver'])} source`,
-				status: 'processing',
-				byteFormatter: null
+				status: 'processing'
 			}
 		],
 		[
@@ -217,7 +206,7 @@ let cacheWritten = false;
 const render = isPrettyMode ? () => {
 	const lines = [];
 
-	for (const [taskName, {allowFailure, byteFormatter, duration, head, message, status, subhead}] of taskGroups[0]) {
+	for (const [taskName, {allowFailure, duration, head, message, status, subhead}] of taskGroups[0]) {
 		let willEnd = false;
 
 		if (status === 'done' || status === 'failed') {
@@ -256,9 +245,7 @@ const render = isPrettyMode ? () => {
 			if (status === 'failed') {
 				lines.push(`${red(`  ${message.replace(/^[ \t]+/u, '')}`)}`);
 			} else {
-				lines.push(ttyTruncate(dim(`  ${
-					byteFormatter ? `⢸${verticalMeter(byteFormatter.bytes / byteFormatter.max)}⡇ ` : ''
-				}${message}`)));
+				lines.push(ttyTruncate(dim(`	${message}`)));
 			}
 		}
 
@@ -292,7 +279,7 @@ const render = isPrettyMode ? () => {
 
 const initialize = once(firstEvent => {
 	if (firstEvent.id === 'search-cache' && firstEvent.found) {
-		console.log(`${info}Found a cache at ${magenta(tildePath(dirname(firstEvent.path)))}\n`);
+		console.log(`${info}Found a cache at ${magenta(dirname(firstEvent.path))}\n`);
 	}
 
 	if (!isPrettyMode) {
@@ -326,7 +313,6 @@ function getCurrentTask(currentId) {
 }
 
 function showError(erroredTask, err) {
-	const showLongMessage = isPrettyMode ? ttyWidthFrame : str => str.replace(/(?:\r?\n)+/ug, ' ');
 	// https://github.com/nodejs/node/blob/v12.0.0/lib/child_process.js#L310
 	// https://github.com/sindresorhus/execa/blob/4692dcd4cec9097ded284ed6f9a71666bd560564/index.js#L167
 	const erroredCommand = err.command || err.cmd;
@@ -338,14 +324,14 @@ function showError(erroredTask, err) {
 	}
 
 	if (err.code === 'ERR_UNSUPPORTED_PLATFORM' || err.code === 'ERR_UNSUPPORTED_ARCH') {
-		const environment = err.code === 'ERR_UNSUPPORTED_PLATFORM' ? platform : `${err.currentArch} architecture`;
-		erroredTask.message = showLongMessage(`No prebuilt PureScript binary is provided for ${environment}.`);
+		const environment = err.code === 'ERR_UNSUPPORTED_PLATFORM' ? process.platform : `${err.currentArch} architecture`;
+		erroredTask.message = `No prebuilt PureScript binary is provided for ${environment}.`;
 	} else if (err.INSTALL_URL) {
-		erroredTask.message = showLongMessage(`${'\'stack\' command is required for building PureScript from source, ' +
+		erroredTask.message = `${'\'stack\' command is required for building PureScript from source, ' +
       'but it\'s not found in your PATH. Make sure you have installed Stack and try again.\n\n' +
-      '→ '}${underline(err.INSTALL_URL)}`);
+      '→ '}${underline(err.INSTALL_URL)}`;
 	} else {
-		erroredTask.message = neatStack(err);
+		erroredTask.message = err.stack;
 	}
 
 	calcDuration(erroredTask);
@@ -354,6 +340,23 @@ function showError(erroredTask, err) {
 		if (task.status !== 'done' && task.status !== 'failed') {
 			task.status = 'skipped';
 		}
+	}
+}
+
+function downloadSummary({ max, bytes }) {
+	return String(Math.round(100 * bytes / max)) + "% of " + filesize(max, filesizeOptions);
+}
+
+function ttyTruncate(msg) {
+	let maxWidth = 80;
+	if (process.stdout && process.stdout.columns) {
+		maxWidth = process.stdout.columns;
+	}
+
+	if (msg.length <= maxWidth) {
+		return msg;
+	} else {
+		return msg.slice(0,80) + "…"
 	}
 }
 
@@ -434,11 +437,11 @@ installPurescript({
 			task.subhead = event.response.url;
 			task.status = 'processing';
 
-			if (!task.byteFormatter) {
-				task.byteFormatter = new SizeRate({max: event.entry.size});
-			}
+			task.message = downloadSummary({
+				max: event.entry.size,
+				bytes: event.entry.size - event.entry.remain
+			});
 
-			task.message = task.byteFormatter.format(event.entry.size - event.entry.remain);
 			return;
 		}
 
@@ -446,10 +449,10 @@ installPurescript({
 			task.subhead = event.response.url;
 			task.status = 'processing';
 
-			if (event.entry.header.size !== 0) {
-				task.byteFormatter = new SizeRate({max: event.entry.size});
-				task.message = `${task.byteFormatter.format(event.entry.size - event.entry.remain)} → ${event.entry.path}`;
-			}
+			task.message = downloadSummary({
+				max: event.entry.size,
+				bytes: event.entry.size - event.entry.remain
+			});
 
 			return;
 		}
@@ -467,7 +470,7 @@ installPurescript({
 			showError(task, err);
 			render();
 		} else {
-			console.error(neatStack(err));
+			console.error(err.stack);
 		}
 
 		process.exitCode = 1;
@@ -487,10 +490,10 @@ installPurescript({
 			cacheWritten ? cacache.get.info(installPurescript.defaultCacheRootDir, installPurescript.cacheKey) : {}
 		]);
 
-		console.log(`Installed to ${magenta(tildePath(path))} ${dim(filesize(bytes, filesizeOptions))}`);
+		console.log(`Installed to ${magenta(path)} ${dim(filesize(bytes, filesizeOptions))}`);
 
 		if (cachePath) {
-			console.log(`Cached to ${magenta(tildePath(dirname(cachePath)))} ${dim(filesize(cacheBytes, filesizeOptions))}`);
+			console.log(`Cached to ${magenta(dirname(cachePath))} ${dim(filesize(cacheBytes, filesizeOptions))}`);
 		}
 
 		console.log();

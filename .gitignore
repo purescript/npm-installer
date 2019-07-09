@@ -3,3 +3,4 @@ node_modules/
 .test-cache/
 coverage/
 purs
+package-lock.json

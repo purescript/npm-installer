@@ -3,14 +3,14 @@
 const {basename, join, resolve} = require('path');
 const {mkdtemp, stat} = require('fs');
 const osTmpdir = require('os').tmpdir;
+const util = require('util');
 
-const feint = require('feint');
-const inspectWithKind = require('inspect-with-kind');
+const feint = require('../feint/index.js');
 const isPlainObj = require('is-plain-obj');
 const Observable = require('zen-observable');
 const once = require('once');
 const rimraf = require('rimraf');
-const spawnStack = require('spawn-stack');
+const spawnStack = require('../spawn-stack/index.js');
 
 const downloadPurescriptSource = require('../download-purescript-source/index.js');
 
@@ -52,7 +52,7 @@ module.exports = function buildPurescript(...args) {
 		if (argLen === 1) {
 			if (!isPlainObj(options)) {
 				throw new TypeError(`Expected build-purescript option to be an object, but got ${
-					inspectWithKind(options)
+					util.inspect(options)
 				}.`);
 			}
 
@@ -66,14 +66,14 @@ module.exports = function buildPurescript(...args) {
 
 			if (options.cwd !== undefined) {
 				throw new Error(`build-purescript doesn't support \`cwd\` option, but ${
-					inspectWithKind(options.cwd)
+					util.inspect(options.cwd)
 				} was provided.`);
 			}
 
 			if (options.args !== undefined) {
 				if (!Array.isArray(options.args)) {
 					throw new TypeError(`${ARGS_ERROR}, but got a non-array value ${
-						inspectWithKind(options.args)
+						util.inspect(options.args)
 					}.`);
 				}
 			}
