@@ -5,7 +5,7 @@ const {inspect, promisify} = require('util');
 const {rename, stat} = require('fs');
 const {basename, join} = require('path');
 
-const feint = require('feint');
+const feint = require('../feint/index.js');
 const isPlainObj = require('is-plain-obj');
 const Observable = require('zen-observable');
 const once = require('once');

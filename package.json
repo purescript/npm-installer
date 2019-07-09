@@ -14,7 +14,6 @@
     "cacache": "^11.3.2",
     "chalk": "^2.4.2",
     "env-paths": "^2.2.0",
-    "feint": "^1.0.3",
     "filesize": "^4.1.2",
     "is-plain-obj": "^2.0.0",
     "log-symbols": "^3.0.0",
