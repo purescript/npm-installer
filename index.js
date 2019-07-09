@@ -18,7 +18,6 @@ const minimist = require('minimist');
 const ms = require('ms');
 const once = require('once');
 const ttyTruncate = require('tty-truncate');
-const ttyWidthFrame = require('tty-width-frame');
 
 const installPurescript = require('./install-purescript/index.js');
 
@@ -315,7 +314,6 @@ function getCurrentTask(currentId) {
 }
 
 function showError(erroredTask, err) {
-	const showLongMessage = isPrettyMode ? ttyWidthFrame : str => str.replace(/(?:\r?\n)+/ug, ' ');
 	// https://github.com/nodejs/node/blob/v12.0.0/lib/child_process.js#L310
 	// https://github.com/sindresorhus/execa/blob/4692dcd4cec9097ded284ed6f9a71666bd560564/index.js#L167
 	const erroredCommand = err.command || err.cmd;
@@ -328,11 +326,11 @@ function showError(erroredTask, err) {
 
 	if (err.code === 'ERR_UNSUPPORTED_PLATFORM' || err.code === 'ERR_UNSUPPORTED_ARCH') {
 		const environment = err.code === 'ERR_UNSUPPORTED_PLATFORM' ? process.platform : `${err.currentArch} architecture`;
-		erroredTask.message = showLongMessage(`No prebuilt PureScript binary is provided for ${environment}.`);
+		erroredTask.message = `No prebuilt PureScript binary is provided for ${environment}.`;
 	} else if (err.INSTALL_URL) {
-		erroredTask.message = showLongMessage(`${'\'stack\' command is required for building PureScript from source, ' +
+		erroredTask.message = `${'\'stack\' command is required for building PureScript from source, ' +
       'but it\'s not found in your PATH. Make sure you have installed Stack and try again.\n\n' +
-      '→ '}${underline(err.INSTALL_URL)}`);
+      '→ '}${underline(err.INSTALL_URL)}`;
 	} else {
 		erroredTask.message = err.stack;
 	}
