@@ -20,7 +20,6 @@ const once = require('once');
 const SizeRate = require('size-rate');
 const ttyTruncate = require('tty-truncate');
 const ttyWidthFrame = require('tty-width-frame');
-const verticalMeter = require('vertical-meter');
 
 const installPurescript = require('./install-purescript/index.js');
 
@@ -252,7 +251,7 @@ const render = isPrettyMode ? () => {
 				lines.push(`${red(`  ${message.replace(/^[ \t]+/u, '')}`)}`);
 			} else {
 				lines.push(ttyTruncate(dim(`  ${
-					byteFormatter ? `⢸${verticalMeter(byteFormatter.bytes / byteFormatter.max)}⡇ ` : ''
+					byteFormatter ? ` [${Math.round(100 * byteFormatter.bytes / byteFormatter.max)}%] ` : ''
 				}${message}`)));
 			}
 		}
