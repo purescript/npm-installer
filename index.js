@@ -17,7 +17,6 @@ const logSymbols = require('log-symbols');
 const minimist = require('minimist');
 const ms = require('ms');
 const once = require('once');
-const ttyTruncate = require('tty-truncate');
 
 const installPurescript = require('./install-purescript/index.js');
 
@@ -346,6 +345,19 @@ function showError(erroredTask, err) {
 
 function downloadSummary({ max, bytes }) {
 	return String(Math.round(100 * bytes / max)) + "% of " + filesize(max, filesizeOptions);
+}
+
+function ttyTruncate(msg) {
+	let maxWidth = 80;
+	if (process.stdout && process.stdout.columns) {
+		maxWidth = process.stdout.columns;
+	}
+
+	if (msg.length <= maxWidth) {
+		return msg;
+	} else {
+		return msg.slice(0,80) + "…"
+	}
 }
 
 installPurescript({
