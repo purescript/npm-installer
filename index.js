@@ -17,7 +17,6 @@ const logSymbols = require('log-symbols');
 const minimist = require('minimist');
 const ms = require('ms');
 const once = require('once');
-const SizeRate = require('size-rate');
 const ttyTruncate = require('tty-truncate');
 const ttyWidthFrame = require('tty-width-frame');
 
@@ -145,8 +144,7 @@ const taskGroups = [
 		[
 			'download-binary',
 			{
-				head: 'Download the prebuilt PureScript binary',
-				byteFormatter: null
+				head: 'Download the prebuilt PureScript binary'
 			}
 		],
 		[
@@ -176,8 +174,7 @@ const taskGroups = [
 			'download-source',
 			{
 				head: `Download the PureScript ${cyan(argv['purs-ver'])} source`,
-				status: 'processing',
-				byteFormatter: null
+				status: 'processing'
 			}
 		],
 		[
@@ -211,7 +208,7 @@ let cacheWritten = false;
 const render = isPrettyMode ? () => {
 	const lines = [];
 
-	for (const [taskName, {allowFailure, byteFormatter, duration, head, message, status, subhead}] of taskGroups[0]) {
+	for (const [taskName, {allowFailure, duration, head, message, status, subhead}] of taskGroups[0]) {
 		let willEnd = false;
 
 		if (status === 'done' || status === 'failed') {
@@ -250,9 +247,7 @@ const render = isPrettyMode ? () => {
 			if (status === 'failed') {
 				lines.push(`${red(`  ${message.replace(/^[ \t]+/u, '')}`)}`);
 			} else {
-				lines.push(ttyTruncate(dim(`  ${
-					byteFormatter ? ` [${Math.round(100 * byteFormatter.bytes / byteFormatter.max)}%] ` : ''
-				}${message}`)));
+				lines.push(ttyTruncate(dim(`	${message}`)));
 			}
 		}
 
@@ -351,6 +346,10 @@ function showError(erroredTask, err) {
 	}
 }
 
+function downloadSummary({ max, bytes }) {
+	return String(Math.round(100 * bytes / max)) + "% of " + filesize(max, filesizeOptions);
+}
+
 installPurescript({
 	args: stackArgs,
 	rename: () => argv.name,
@@ -428,11 +427,11 @@ installPurescript({
 			task.subhead = event.response.url;
 			task.status = 'processing';
 
-			if (!task.byteFormatter) {
-				task.byteFormatter = new SizeRate({max: event.entry.size});
-			}
+			task.message = downloadSummary({
+				max: event.entry.size,
+				bytes: event.entry.size - event.entry.remain
+			});
 
-			task.message = task.byteFormatter.format(event.entry.size - event.entry.remain);
 			return;
 		}
 
@@ -440,10 +439,10 @@ installPurescript({
 			task.subhead = event.response.url;
 			task.status = 'processing';
 
-			if (event.entry.header.size !== 0) {
-				task.byteFormatter = new SizeRate({max: event.entry.size});
-				task.message = `${task.byteFormatter.format(event.entry.size - event.entry.remain)} → ${event.entry.path}`;
-			}
+			task.message = downloadSummary({
+				max: event.entry.size,
+				bytes: event.entry.size - event.entry.remain
+			});
 
 			return;
 		}
