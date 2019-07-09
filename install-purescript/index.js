@@ -13,7 +13,6 @@ const inspectWithKind = require('inspect-with-kind');
 const isPlainObj = require('is-plain-obj');
 const Observable = require('zen-observable');
 const pump = require('pump');
-const runInDir = require('run-in-dir');
 const envPaths = require('env-paths');
 
 const downloadOrBuildPurescript = require('../download-or-build-purescript/index.js');
@@ -87,7 +86,7 @@ module.exports = function installPurescript(...args) {
 				} catch(_) {}
 			})();
 
-			runInDir(cwd, () => subscriptions.add(downloadOrBuildPurescript(options).subscribe({
+			subscriptions.add(downloadOrBuildPurescript(options).subscribe({
 				next(val) {
 					observer.next(val);
 				},
@@ -124,7 +123,7 @@ module.exports = function installPurescript(...args) {
 					observer.next({id: 'write-cache:complete'});
 					observer.complete();
 				}
-			})));
+			}));
 		}
 
 		if (options.forceReinstall) {

@@ -11,7 +11,6 @@ const isPlainObj = require('is-plain-obj');
 const Observable = require('zen-observable');
 const once = require('once');
 const {pause, resume} = require('pause-methods');
-const runInDir = require('run-in-dir');
 const spawnStack = require('spawn-stack');
 const which = require('which');
 
@@ -107,7 +106,7 @@ module.exports = function downloadOrBuildPurescript(...args) {
 			observer.next(stackCheckResult);
 			observer.next({id: 'check-stack:complete'});
 
-			runInDir(cwd, () => subscriptions.add(buildPurescript(buildOptions).subscribe({
+			subscriptions.add(buildPurescript(buildOptions).subscribe({
 				next(progress) {
 					if (progress.id === 'build:complete') {
 						// No need to check `join(cwd, initialBinName) !== binPath`, because:
@@ -134,7 +133,7 @@ module.exports = function downloadOrBuildPurescript(...args) {
 				error(err) {
 					sendError(err, err.id.replace('download', 'download-source'));
 				}
-			})));
+			}));
 		});
 
 		const startBuildIfNeeded = () => {
