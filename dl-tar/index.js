@@ -4,7 +4,7 @@ const {inspect, promisify} = require('util');
 const {resolve} = require('path');
 const {Transform} = require('stream');
 
-const cancelablePump = require('cancelable-pump');
+const cancelablePump = require('../cancelable-pump/index.js');
 const {Unpack} = require('tar');
 const isPlainObj = require('is-plain-obj');
 const request = require('request');
