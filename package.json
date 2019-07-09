@@ -1,6 +1,6 @@
 {
   "name": "purescript-installer",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Installs the PureScript compiler",
   "bin": {
     "install-purescript": "index.js"
