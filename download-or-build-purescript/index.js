@@ -9,7 +9,6 @@ const feint = require('../feint/index.js');
 const isPlainObj = require('is-plain-obj');
 const Observable = require('zen-observable');
 const once = require('once');
-const {pause, resume} = require('pause-methods');
 const spawnStack = require('../spawn-stack/index.js');
 const which = require('which');
 
@@ -155,7 +154,7 @@ module.exports = function downloadOrBuildPurescript(...args) {
 			startBuildIfNeeded();
 		});
 
-		const downloadObserver = pause({
+		const downloadObserver = {
 			next(progress) {
 				progress.id = 'download-binary';
 				observer.next(progress);
@@ -196,7 +195,7 @@ module.exports = function downloadOrBuildPurescript(...args) {
 				observer.next({id: 'check-binary:complete'});
 				observer.complete();
 			}
-		});
+		};
 
 		const completeHead = feint(once(() => {
 			observer.next({id: 'head:complete'});
@@ -245,7 +244,6 @@ module.exports = function downloadOrBuildPurescript(...args) {
 			}
 
 			observer.next({id: 'head'});
-			resume(downloadObserver);
 			completeHead();
 		})();
 
