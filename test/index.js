@@ -10,6 +10,9 @@ const installPurescript = require('../install-purescript/index.js');
 
 const cacheRootDir = ".test-cache";
 
+// Set a timeout of 60s (default is 30s)
+tap.setTimeout(1000 * 60);
+
 rimraf.sync(cacheRootDir);
 
 // Given an installPurescript observable, return a promise which resolves to a
