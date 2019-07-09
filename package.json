@@ -16,7 +16,6 @@
     "env-paths": "^2.2.0",
     "feint": "^1.0.3",
     "filesize": "^4.1.2",
-    "inspect-with-kind": "^1.0.5",
     "is-plain-obj": "^2.0.0",
     "log-symbols": "^3.0.0",
     "log-update": "^3.2.0",

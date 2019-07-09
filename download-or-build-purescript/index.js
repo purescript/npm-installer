@@ -6,7 +6,6 @@ const {rename, stat} = require('fs');
 const {basename, join} = require('path');
 
 const feint = require('feint');
-const inspectWithKind = require('inspect-with-kind');
 const isPlainObj = require('is-plain-obj');
 const Observable = require('zen-observable');
 const once = require('once');
@@ -49,13 +48,13 @@ module.exports = function downloadOrBuildPurescript(...args) {
 		if (argLen === 1) {
 			if (!isPlainObj(options)) {
 				throw new TypeError(`Expected an object to specify options of install-purescript, but got ${
-					inspectWithKind(options)
+					inspect(options)
 				}.`);
 			}
 
 			if (options.rename !== undefined && typeof options.rename !== 'function') {
 				throw new TypeError(`\`rename\` option must be a function, but ${
-					inspectWithKind(options.rename)
+					inspect(options.rename)
 				} was provided.`);
 			}
 
@@ -74,7 +73,7 @@ module.exports = function downloadOrBuildPurescript(...args) {
 
 		if (typeof binName !== 'string') {
 			throw new TypeError(`Expected \`rename\` option to be a function that returns a string, but returned ${
-				inspectWithKind(binName)
+				inspect(binName)
 			}.`);
 		}
 

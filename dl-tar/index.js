@@ -6,7 +6,6 @@ const {Transform} = require('stream');
 
 const cancelablePump = require('cancelable-pump');
 const {Unpack} = require('tar');
-const inspectWithKind = require('inspect-with-kind');
 const isPlainObj = require('is-plain-obj');
 const request = require('request');
 const mkdirp = require('mkdirp');
@@ -134,7 +133,7 @@ module.exports = function dlTar(...args) {
 
 				if (val !== undefined && typeof val !== 'function') {
 					throw new TypeError(`\`${optionName}\` option must be a function, but got ${
-						inspectWithKind(val)
+						inspect(val)
 					}.`);
 				}
 			}

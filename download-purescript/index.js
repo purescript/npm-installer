@@ -5,7 +5,6 @@ const {inspect} = require('util');
 
 const dlTar = require('../dl-tar/index.js');
 const getArch = require('arch');
-const inspectWithKind = require('inspect-with-kind');
 const isPlainObj = require('is-plain-obj');
 const Observable = require('zen-observable');
 
@@ -107,7 +106,7 @@ module.exports = arch === 'x64' ? function downloadPurescript(...args) {
 	if (options.strip !== undefined && options.strip !== 1) {
 		return new Observable(observer => {
 			observer.error(new Error(`\`strip\` option is unchangeable, but ${
-				inspectWithKind(options.strip)
+				inspect(options.strip)
 			} was provided.`));
 		});
 	}
