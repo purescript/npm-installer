@@ -18,7 +18,6 @@ const minimist = require('minimist');
 const ms = require('ms');
 const neatStack = require('neat-stack');
 const once = require('once');
-const platformName = require('platform-name');
 const SizeRate = require('size-rate');
 const tildePath = require('tilde-path');
 const ttyTruncate = require('tty-truncate');
@@ -101,8 +100,6 @@ if (!argv.name) {
 	}
 }
 
-const platform = platformName();
-
 class TaskGroup extends Map {
 	constructor(iterable) {
 		super(iterable);
@@ -130,7 +127,7 @@ const taskGroups = [
 		[
 			'restore-cache',
 			{
-				head: `Restore the cached ${cyan(argv['purs-ver'])} binary for ${platform}`
+				head: `Restore the cached ${cyan(argv['purs-ver'])} binary for ${process.platform}`
 			}
 		],
 		[
@@ -144,7 +141,7 @@ const taskGroups = [
 		[
 			'head',
 			{
-				head: `Check if a prebuilt ${cyan(argv['purs-ver'])} binary is provided for ${platform}`,
+				head: `Check if a prebuilt ${cyan(argv['purs-ver'])} binary is provided for ${process.platform}`,
 				status: 'processing'
 			}
 		],
@@ -338,7 +335,7 @@ function showError(erroredTask, err) {
 	}
 
 	if (err.code === 'ERR_UNSUPPORTED_PLATFORM' || err.code === 'ERR_UNSUPPORTED_ARCH') {
-		const environment = err.code === 'ERR_UNSUPPORTED_PLATFORM' ? platform : `${err.currentArch} architecture`;
+		const environment = err.code === 'ERR_UNSUPPORTED_PLATFORM' ? process.platform : `${err.currentArch} architecture`;
 		erroredTask.message = showLongMessage(`No prebuilt PureScript binary is provided for ${environment}.`);
 	} else if (err.INSTALL_URL) {
 		erroredTask.message = showLongMessage(`${'\'stack\' command is required for building PureScript from source, ' +

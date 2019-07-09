@@ -26,7 +26,6 @@
     "neat-stack": "^1.0.1",
     "once": "^1.4.0",
     "pause-methods": "^1.0.0",
-    "platform-name": "^1.0.0",
     "request": "^2.88.0",
     "rimraf": "^2.6.3",
     "run-in-dir": "^0.3.0",
