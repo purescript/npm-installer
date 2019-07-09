@@ -143,43 +143,36 @@ module.exports = function installPurescript(...args) {
 				id: 'search-cache',
 				found: false
 			};
-			let id;
-			let cachePath;
-			let binMode;
 
-			try {
-				const [info] = await Promise.all([
-					cacache.get.info(cacheRootDir, CACHE_KEY),
-					(async () => {
-						await promisify(setImmediate)();
-						tmpSubscription.unsubscribe();
-					})(),
-					(async () => {
-						let binStat;
-						try {
-							binStat = await promisify(fs.stat)(binPath);
+			const [info] = await Promise.all([
+				cacache.get.info(cacheRootDir, CACHE_KEY),
+				(async () => {
+					await promisify(setImmediate)();
+					tmpSubscription.unsubscribe();
+				})(),
+				(async () => {
+					let binStat;
+					try {
+						binStat = await promisify(fs.stat)(binPath);
 
-							if (binStat.isDirectory()) {
-								const error = new Error(`Tried to create a PureScript binary at ${binPath}, but a directory already exists there.`);
+						if (binStat.isDirectory()) {
+							const error = new Error(`Tried to create a PureScript binary at ${binPath}, but a directory already exists there.`);
 
-								error.code = 'EISDIR';
-								error.path = binPath;
-								observer.error(error);
-							} else {
-								await promisify(fs.unlink)(binPath);
-							}
-						} catch (err) {
-							if (err.code !== 'ENOENT') {
-								throw err;
-							}
+							error.code = 'EISDIR';
+							error.path = binPath;
+							observer.error(error);
+						} else {
+							await promisify(fs.unlink)(binPath);
 						}
-					})()
-				]);
+					} catch (err) {
+						if (err.code !== 'ENOENT') {
+							throw err;
+						}
+					}
+				})()
+			]);
 
-				id = info.metadata.id;
-				cachePath = info.path;
-				binMode = info.metadata.mode;
-			} catch (_) {
+			if (info == null) {
 				if (observer.closed) {
 					return;
 				}
@@ -189,6 +182,10 @@ module.exports = function installPurescript(...args) {
 
 				return;
 			}
+
+			const id = info.metadata.id;
+			const cachePath = info.path;
+			const binMode = info.metadata.mode;
 
 			if (observer.closed) {
 				return;
