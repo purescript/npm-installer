@@ -10,7 +10,7 @@ const isPlainObj = require('is-plain-obj');
 const Observable = require('zen-observable');
 const once = require('once');
 const rimraf = require('rimraf');
-const spawnStack = require('spawn-stack');
+const spawnStack = require('../spawn-stack/index.js');
 
 const downloadPurescriptSource = require('../download-purescript-source/index.js');
 

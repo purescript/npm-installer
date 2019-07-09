@@ -27,7 +27,6 @@
     "request": "^2.88.0",
     "rimraf": "^2.6.3",
     "size-rate": "^0.3.1",
-    "spawn-stack": "^0.7.0",
     "tar": "^4.4.6",
     "tilde-path": "^3.0.0",
     "tty-truncate": "^1.0.3",

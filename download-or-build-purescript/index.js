@@ -10,7 +10,7 @@ const isPlainObj = require('is-plain-obj');
 const Observable = require('zen-observable');
 const once = require('once');
 const {pause, resume} = require('pause-methods');
-const spawnStack = require('spawn-stack');
+const spawnStack = require('../spawn-stack/index.js');
 const which = require('which');
 
 const buildPurescript = require('../build-purescript/index.js');
