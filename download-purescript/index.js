@@ -3,7 +3,7 @@
 const {basename} = require('path');
 const {inspect} = require('util');
 
-const dlTar = require('dl-tar');
+const dlTar = require('../dl-tar/index.js');
 const getArch = require('arch');
 const inspectWithKind = require('inspect-with-kind');
 const isPlainObj = require('is-plain-obj');
