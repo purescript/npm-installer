@@ -16,7 +16,6 @@ const logUpdate = require('log-update');
 const logSymbols = require('log-symbols');
 const minimist = require('minimist');
 const ms = require('ms');
-const neatStack = require('neat-stack');
 const once = require('once');
 const SizeRate = require('size-rate');
 const tildePath = require('tilde-path');
@@ -342,7 +341,7 @@ function showError(erroredTask, err) {
       'but it\'s not found in your PATH. Make sure you have installed Stack and try again.\n\n' +
       '→ '}${underline(err.INSTALL_URL)}`);
 	} else {
-		erroredTask.message = neatStack(err);
+		erroredTask.message = err.stack;
 	}
 
 	calcDuration(erroredTask);
@@ -464,7 +463,7 @@ installPurescript({
 			showError(task, err);
 			render();
 		} else {
-			console.error(neatStack(err));
+			console.error(err.stack);
 		}
 
 		process.exitCode = 1;

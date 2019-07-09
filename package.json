@@ -23,7 +23,6 @@
     "minimist": "^1.2.0",
     "mkdirp": "^0.5.1",
     "ms": "^2.1.2",
-    "neat-stack": "^1.0.1",
     "once": "^1.4.0",
     "pause-methods": "^1.0.0",
     "request": "^2.88.0",
