@@ -6,7 +6,7 @@ A command-line tool to install [PureScript](https://github.com/purescript/puresc
 2. The second plan: if no cache is available, it downloads a prebuilt binary from [the PureScript release page](https://github.com/purescript/purescript/releases).
 3. The last resort: if no prebuilt binary is provided for the current platform or the downloaded binary doesn't work correctly, it downloads [the PureScript source code](https://github.com/purescript/purescript/tree/master) and compile it with [Stack](https://docs.haskellstack.org/).
 
-*In most cases users don't need to install this CLI directly, but would rather use [`purescript` npm package](https://github.com/purescript-contrib/node-purescript).*
+*In most cases users don't need to install this CLI directly, but would rather use the [`purescript` npm package](https://npmjs.com/package/purescript).*
 
 ## Installation
 
