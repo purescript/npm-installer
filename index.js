@@ -334,6 +334,8 @@ function showError(erroredTask, err) {
 		erroredTask.message = err.stack;
 	}
 
+	erroredTask.message += '\n\nSee troubleshooting suggestions in https://github.com/purescript/purescript/blob/master/INSTALL.md';
+
 	calcDuration(erroredTask);
 
 	for (const task of taskGroups[0].values()) {
