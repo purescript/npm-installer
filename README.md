@@ -49,6 +49,31 @@ Also, these flags are passed to `stack install` command if provided:
 --no-run-benchmarks
 ```
 
+## Developer Guide
+
+If you'd like to contribute to this project, here are instructions for testing your changes locally:
+
+Checkout code and create global link to PS installer package:
+```
+git clone https://github.com/purescript/npm-installer.git
+cd npm-installer
+npm link
+```
+
+Create another project for testing, and add linked PS installer:
+```
+cd ..
+mkdir test-installer
+cd test-installer
+npm init -y
+npm link purescript-installer
+```
+
+Test PS installer. You may re-run this command without repeating any of the above steps to pick-up new PS installer changes.
+```
+npx install-purescript
+```
+
 ## Related project
 
 * [install-purescript](https://github.com/shinnn/install-purescript) — API for this module
