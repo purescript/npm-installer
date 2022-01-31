@@ -1,17 +1,15 @@
 'use strict';
 
-const {inspect, promisify} = require('util');
+const {inspect} = require('util');
 const {resolve} = require('path');
 const {Transform} = require('stream');
+const {promises: fs} = require('fs');
 
 const cancelablePump = require('../cancelable-pump/index.js');
 const {Unpack} = require('tar');
 const isPlainObj = require('is-plain-obj');
 const request = require('request');
-const mkdirp = require('mkdirp');
 const Observable = require('zen-observable');
-
-const promisifiedMkdirp = promisify(mkdirp);
 
 class InternalUnpack extends Unpack {
 	constructor(options) {
@@ -173,7 +171,7 @@ module.exports = function dlTar(...args) {
 		(async () => {
 			try {
 				if (absoluteDest !== cwd) {
-					await promisifiedMkdirp(absoluteDest);
+					await fs.mkdir(absoluteDest, {recursive: true});
 				}
 
 				if (ended) {
