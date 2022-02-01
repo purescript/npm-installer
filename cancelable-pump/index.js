@@ -1,6 +1,6 @@
 'use strict';
 
-const pump = require('pump');
+const {pipeline: pump} = require('stream');
 
 const cancel = new Error('Canceled.');
 
