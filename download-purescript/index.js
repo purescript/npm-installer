@@ -2,6 +2,7 @@
 
 const {basename} = require('path');
 const {inspect} = require('util');
+const semver = require('semver');
 
 const dlTar = require('../dl-tar/index.js');
 const getArch = require('arch');
