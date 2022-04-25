@@ -74,10 +74,6 @@ Test PS installer. You may re-run this command without repeating any of the abov
 npx install-purescript
 ```
 
-## Related project
-
-* [install-purescript](https://github.com/shinnn/install-purescript) — API for this module
-
 ## License
 
 [ISC License](./LICENSE) © 2017 - 2019 Watanabe Shinnosuke
