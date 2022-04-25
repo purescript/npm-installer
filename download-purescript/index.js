@@ -92,7 +92,7 @@ module.exports = arch === 'x64' ? function downloadPurescript(...args) {
 			});
 		}
 
-		if (!/^[\d.]+$/u.test(version)) {
+		if (!semver.valid(version)) {
 			return new Observable(observer => {
 				observer.error(new Error(`${VERSION_ERROR}, but got an invalid version ${inspect(version)}.`));
 			});
