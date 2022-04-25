@@ -22,4 +22,4 @@ jobs:
         with:
           node-version: "14.x"
 
-      - run: node test/indx.js
+      - run: node test/index.js
