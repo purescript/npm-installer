@@ -1,6 +1,6 @@
 {
   "name": "purescript-installer",
-  "version": "0.2.5",
+  "version": "0.2.6",
   "description": "Installs the PureScript compiler",
   "bin": {
     "install-purescript": "index.js"
@@ -26,6 +26,7 @@
     "pump": "^3.0.0",
     "request": "^2.88.0",
     "rimraf": "^2.6.3",
+    "semver": "^7.3.7",
     "tar": "^4.4.6",
     "which": "^1.3.1",
     "zen-observable": "^0.8.14"

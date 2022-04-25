@@ -2,6 +2,7 @@
 
 const {basename} = require('path');
 const {inspect} = require('util');
+const semver = require('semver');
 
 const dlTar = require('../dl-tar/index.js');
 const getArch = require('arch');
@@ -92,7 +93,7 @@ module.exports = arch === 'x64' ? function downloadPurescript(...args) {
 			});
 		}
 
-		if (!/^[\d.]+$/u.test(version)) {
+		if (!semver.valid(version)) {
 			return new Observable(observer => {
 				observer.error(new Error(`${VERSION_ERROR}, but got an invalid version ${inspect(version)}.`));
 			});

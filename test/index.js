@@ -110,3 +110,10 @@ tap.test('install a different version from cache', testInstall('0.12.5', [
 	{ id: 'restore-cache' },
 	{ id: 'check-binary' }
 ]));
+
+tap.test('clean install', testInstall('0.15.0-alpha-06', [
+	{ id: 'search-cache', found: false },
+	{ id: 'download-binary' },
+	{ id: 'check-binary' },
+	{ id: 'write-cache' }
+]));
