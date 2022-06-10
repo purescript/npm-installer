@@ -32,7 +32,7 @@
     "zen-observable": "^0.8.14"
   },
   "devDependencies": {
-    "tap": "^14.2.3"
+    "tap": "^16.2.0"
   },
   "scripts": {
     "test": "tap"
