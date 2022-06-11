@@ -4,14 +4,13 @@ const fs = require('fs');
 const {execFile} = require('child_process');
 const path = require('path');
 const {inspect, promisify} = require('util');
-const {Writable} = require('stream');
+const {pipeline: pump} = require('stream');
 
 const arch = require('arch');
 const {create, Unpack} = require('tar');
 const cacache = require('cacache');
 const isPlainObj = require('is-plain-obj');
 const Observable = require('zen-observable');
-const pump = require('pump');
 const envPaths = require('env-paths');
 
 const downloadOrBuildPurescript = require('../download-or-build-purescript/index.js');

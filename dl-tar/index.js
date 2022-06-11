@@ -1,17 +1,15 @@
 'use strict';
 
-const {inspect, promisify} = require('util');
+const {inspect} = require('util');
 const {resolve} = require('path');
 const {Transform} = require('stream');
+const {promises: fs} = require('fs');
 
 const cancelablePump = require('../cancelable-pump/index.js');
 const {Unpack} = require('tar');
 const isPlainObj = require('is-plain-obj');
-const request = require('request');
-const mkdirp = require('mkdirp');
+const fetch = require('make-fetch-happen');
 const Observable = require('zen-observable');
-
-const promisifiedMkdirp = promisify(mkdirp);
 
 class InternalUnpack extends Unpack {
 	constructor(options) {
@@ -173,7 +171,7 @@ module.exports = function dlTar(...args) {
 		(async () => {
 			try {
 				if (absoluteDest !== cwd) {
-					await promisifiedMkdirp(absoluteDest);
+					await fs.mkdir(absoluteDest, {recursive: true});
 				}
 
 				if (ended) {
@@ -186,21 +184,24 @@ module.exports = function dlTar(...args) {
 					observer
 				});
 
+				const {baseUrl, headers} = options;
+				const {href} = new URL(url, baseUrl);
+
+				const res = await fetch(href, {headers}).then(response => {
+
+					if (response.ok !== true) {
+						throw new Error(`${response.status} ${response.statusText}`);
+					}
+
+					unpackStream.url = response.url;
+					unpackStream.responseHeaders = response.headers;
+
+					return response;
+
+				});
+
 				const pipe = [
-					request({url, ...options, encoding: null})
-					.on('response', function(response) {
-						if (response.statusCode < 200 || 299 < response.statusCode) {
-							this.emit('error', new Error(`${response.statusCode} ${response.statusMessage}`));
-							return;
-						}
-
-						if (typeof response.headers['content-length'] === 'string') {
-							response.headers['content-length'] = Number(response.headers['content-length']);
-						}
-
-						unpackStream.url = response.request.uri.href;
-						unpackStream.responseHeaders = response.headers;
-					}),
+					res.body,
 					new Transform({
 						transform(chunk, encoding, cb) {
 							unpackStream.responseBytes += chunk.length;
