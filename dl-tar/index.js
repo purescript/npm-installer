@@ -219,7 +219,7 @@ module.exports = function dlTar(...args) {
 						return;
 					}
 
-					observer.complete();
+					setTimeout(() => observer.complete(), 1000);
 				});
 			} catch (err) {
 				ended = true;
