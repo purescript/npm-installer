@@ -129,12 +129,6 @@ module.exports = function installPurescript(...args) {
 			return cancelInstallation;
 		}
 
-		const tmpSubscription = downloadOrBuildPurescript(options).subscribe({
-			error(err) {
-				observer.error(err);
-			}
-		});
-
 		(async () => {
 			const searchCacheValue = {
 				id: 'search-cache',
@@ -143,10 +137,6 @@ module.exports = function installPurescript(...args) {
 
 			const [info] = await Promise.all([
 				cacache.get.info(cacheRootDir, CACHE_KEY),
-				(async () => {
-					await promisify(setImmediate)();
-					tmpSubscription.unsubscribe();
-				})(),
 				(async () => {
 					let binStat;
 					try {
