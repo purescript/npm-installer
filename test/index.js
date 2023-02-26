@@ -85,35 +85,28 @@ function testInstall(version, expectedEvents) {
 	});
 }
 
-tap.test('clean install', testInstall('0.13.0', [
+tap.test('clean install', testInstall('0.15.7', [
 	{ id: 'search-cache', found: false },
 	{ id: 'download-binary' },
 	{ id: 'check-binary' },
 	{ id: 'write-cache' }
 ]));
 
-tap.test('install from cache', testInstall('0.13.0', [
+tap.test('install from cache', testInstall('0.15.7', [
 	{ id: 'search-cache', found: true },
 	{ id: 'restore-cache' },
 	{ id: 'check-binary' }
 ]));
 
-tap.test('install a different version', testInstall('0.12.5', [
+tap.test('install a different version', testInstall('0.15.6', [
 	{ id: 'search-cache', found: false },
 	{ id: 'download-binary' },
 	{ id: 'check-binary' },
 	{ id: 'write-cache' }
 ]));
 
-tap.test('install a different version from cache', testInstall('0.12.5', [
+tap.test('install a different version from cache', testInstall('0.15.6', [
 	{ id: 'search-cache', found: true },
 	{ id: 'restore-cache' },
 	{ id: 'check-binary' }
-]));
-
-tap.test('clean install', testInstall('0.15.0-alpha-06', [
-	{ id: 'search-cache', found: false },
-	{ id: 'download-binary' },
-	{ id: 'check-binary' },
-	{ id: 'write-cache' }
 ]));
