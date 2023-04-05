@@ -1,13 +1,10 @@
 'use strict';
 
 const fs = require('fs');
-const {execFile} = require('child_process');
+const { execFile } = require('child_process');
 const path = require('path');
-const {inspect, promisify} = require('util');
-const {pipeline: pump} = require('stream');
-
-const arch = require('arch');
-const {create, Unpack} = require('tar');
+const { inspect, promisify } = require('util');
+const { pipeline: pump } = require('stream');
 const cacache = require('cacache');
 const isPlainObj = require('is-plain-obj');
 const Observable = require('zen-observable');
@@ -26,9 +23,8 @@ function addId(obj, id) {
 
 const defaultCacheRootDir = envPaths('purescript-npm-installer').cache;
 const CACHE_KEY = 'install-purescript:binary';
-const MAX_READ_SIZE = 30 * 1024 * 1024;
 const defaultBinName = `purs${process.platform === 'win32' ? '.exe' : ''}`;
-const cacheIdSuffix = `-${process.platform}-${arch()}`;
+const cacheIdSuffix = `-${process.platform}-${process.arch}`;
 
 module.exports = function installPurescript(...args) {
 	return new Observable(observer => {

@@ -9,7 +9,6 @@
     "node": ">=12"
   },
   "dependencies": {
-    "arch": "^2.1.1",
     "byline": "^5.0.0",
     "cacache": "^11.3.2",
     "chalk": "^2.4.2",
