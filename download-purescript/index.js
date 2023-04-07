@@ -2,6 +2,7 @@
 
 const { basename } = require('path');
 const { inspect } = require('util');
+const os = require('os');
 const semver = require('semver');
 
 const dlTar = require('../dl-tar/index.js');
@@ -12,8 +13,10 @@ const supportedPlatforms = new Map([
   ['linux-x64', 'linux64'],
   ['darwin-x64', 'macos'],
   ['win32-x64', 'win64'],
+  ['darwin-arm64', 'macos-arm64'],
+  // on Linux os.machine returns aarch64, os.arch returns arm64...
+  ['linux-aarch64', 'linux-arm64'],
   ['linux-arm64', 'linux-arm64'],
-  ['darwin-arm64', 'macos-arm64']
 ]);
 
 const DEFAULT_VERSION = '0.15.0';
@@ -36,7 +39,13 @@ function createUnsupportedPlatformError(buildProfile) {
 }
 
 module.exports = function downloadPurescript(...args) {
-  let buildProfile = `${process.platform}-${process.arch}`;
+  let architecture = process.arch;
+  // It's only defined from Node 16.18 onwards
+  if (typeof os.machine === 'function') {
+    architecture = os.machine();
+  }
+
+  let buildProfile = `${process.platform}-${architecture}`;
   const archiveName = supportedPlatforms.get(buildProfile);
 
   if (!archiveName) {
