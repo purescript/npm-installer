@@ -13,7 +13,7 @@ const spawnStack = require('../spawn-stack/index.js');
 const which = require('which');
 
 const buildPurescript = require('../build-purescript/index.js');
-const downloadPurescript = require('../download-purescript/index.js');
+const { defaultVersion, downloadPurescript } = require('../download-purescript/index.js');
 
 function addId(obj, id) {
 	Object.defineProperty(obj, 'id', {
@@ -66,8 +66,8 @@ module.exports = function downloadOrBuildPurescript(...args) {
 			}
 		}
 
-		const version = options.version || downloadPurescript.defaultVersion;
-		const buildOptions = {revision: `v${version}`, ...options};
+		const version = options.version || defaultVersion;
+		const buildOptions = { revision: `v${version}`, ...options };
 		const binName = options.rename ? options.rename(initialBinName) : initialBinName;
 
 		if (typeof binName !== 'string') {
@@ -276,7 +276,7 @@ module.exports = function downloadOrBuildPurescript(...args) {
 Object.defineProperties(module.exports, {
 	defaultVersion: {
 		enumerable: true,
-		value: downloadPurescript.defaultVersion
+		value: defaultVersion
 	},
 	supportedBuildFlags: {
 		enumerable: true,
