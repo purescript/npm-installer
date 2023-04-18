@@ -19,7 +19,7 @@ const ms = require('ms');
 const once = require('once');
 
 const installPurescript = require('./install-purescript/index.js');
-const downloadPurescript = require('./download-purescript/index.js');
+const { defaultVersion, getBuildProfile } = require('./download-purescript/index.js');
 
 const {blue, cyan, dim, magenta, red, strikethrough, underline, yellow} = chalk;
 
@@ -44,7 +44,7 @@ const argv = minimist(process.argv.slice(2), {
 		'purs-ver'
 	],
 	default: {
-		'purs-ver': downloadPurescript.defaultVersion,
+		'purs-ver': defaultVersion,
 	},
 	unknown(flag) {
 		if (!installPurescript.supportedBuildFlags.has(flag)) {
@@ -136,7 +136,7 @@ const taskGroups = [
 		[
 			'head',
 			{
-				head: `Check if a prebuilt ${cyan(argv['purs-ver'])} binary is provided for ${process.platform}-${process.arch}`,
+				head: `Check if a prebuilt ${cyan(argv['purs-ver'])} binary is provided for ${getBuildProfile()}`,
 				status: 'processing'
 			}
 		],

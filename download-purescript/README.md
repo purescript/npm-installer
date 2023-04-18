@@ -8,7 +8,7 @@ A [Node.js](https://nodejs.org) module to download a prebuilt [PureScript](https
 
 ```javascript
 const {readdir} = require('fs').promises;
-const downloadPurescript = require('download-purescript');
+const { downloadPurescript } = require('download-purescript');
 
 downloadPurescript().subscribe({
   async complete() {
@@ -28,7 +28,7 @@ npm install download-purescript
 ## API
 
 ```javascript
-const downloadPurescript = require('download-purescript');
+const { downloadPurescript } = require('download-purescript');
 ```
 
 ### downloadPurescript([*options*])

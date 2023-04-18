@@ -11,6 +11,7 @@ const Observable = require('zen-observable');
 const envPaths = require('env-paths');
 
 const downloadOrBuildPurescript = require('../download-or-build-purescript/index.js');
+const { getBuildProfile } = require('../download-purescript/index.js');
 
 function addId(obj, id) {
 	Object.defineProperty(obj, 'id', {
@@ -24,7 +25,7 @@ function addId(obj, id) {
 const defaultCacheRootDir = envPaths('purescript-npm-installer').cache;
 const CACHE_KEY = 'install-purescript:binary';
 const defaultBinName = `purs${process.platform === 'win32' ? '.exe' : ''}`;
-const cacheIdSuffix = `-${process.platform}-${process.arch}`;
+const cacheIdSuffix = `-${getBuildProfile()}`;
 
 module.exports = function installPurescript(...args) {
 	return new Observable(observer => {

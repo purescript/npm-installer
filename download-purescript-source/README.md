@@ -8,7 +8,7 @@ A [Node.js](https://nodejs.org) module to download [PureScript](https://github.c
 
 ```javascript
 const {readdir} = require('fs').promises;
-const downloadPurescript = require('download-purescript-source');
+const { downloadPurescript } = require('download-purescript-source');
 
 downloadPurescript('./dest/').subscribe({
   async complete() {

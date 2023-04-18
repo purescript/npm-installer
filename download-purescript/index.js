@@ -38,14 +38,18 @@ function createUnsupportedPlatformError(buildProfile) {
   return new Observable(observer => observer.error(error));
 }
 
-module.exports = function downloadPurescript(...args) {
+function getBuildProfile() {
   let architecture = process.arch;
   // It's only defined from Node 16.18 onwards
   if (typeof os.machine === 'function') {
     architecture = os.machine();
   }
 
-  let buildProfile = `${process.platform}-${architecture}`;
+  return `${process.platform}-${architecture}`;
+}
+
+exports.downloadPurescript = function (...args) {
+  let buildProfile = getBuildProfile();
   const archiveName = supportedPlatforms.get(buildProfile);
 
   if (!archiveName) {
@@ -104,7 +108,6 @@ module.exports = function downloadPurescript(...args) {
   return dlTar(url, process.cwd(), options);
 }
 
-Object.defineProperty(module.exports, 'defaultVersion', {
-  enumerable: true,
-  value: DEFAULT_VERSION
-});
+exports.defaultVersion = DEFAULT_VERSION;
+
+exports.getBuildProfile = getBuildProfile;
