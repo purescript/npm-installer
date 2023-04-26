@@ -13,6 +13,9 @@ const supportedPlatforms = new Map([
   ['linux-x64', 'linux64'],
   ['darwin-x64', 'macos'],
   ['win32-x64', 'win64'],
+  ['linux-x86_64', 'linux64'],
+  ['darwin-x86_64', 'macos'],
+  ['win32--x86_64', 'win64'],
   ['darwin-arm64', 'macos-arm64'],
   // on Linux os.machine returns aarch64, os.arch returns arm64...
   ['linux-aarch64', 'linux-arm64'],
