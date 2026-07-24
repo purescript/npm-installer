@@ -4,7 +4,7 @@ const fs = require('fs');
 const {execFile} = require('child_process');
 const util = require('util');
 const tap = require('tap');
-const rimraf = require('rimraf');
+const {rimrafSync} = require('rimraf');
 
 const installPurescript = require('../install-purescript/index.js');
 
@@ -13,7 +13,7 @@ const cacheRootDir = ".test-cache";
 // Set a timeout of 60s (default is 30s)
 tap.setTimeout(1000 * 60);
 
-rimraf.sync(cacheRootDir);
+rimrafSync(cacheRootDir);
 
 // Given an installPurescript observable, return a promise which resolves to a
 // summary of the events which occurred during installation (i.e. without

@@ -17,7 +17,7 @@ class InternalUnpack extends Unpack {
 			strict: true,
 			strip: 1,
 			...options,
-			onentry(entry) {
+			onReadEntry(entry) {
 				if (entry.size === 0) {
 					setImmediate(() => this.emitProgress(entry));
 					return;
