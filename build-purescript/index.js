@@ -9,7 +9,7 @@ const feint = require('../feint/index.js');
 const isPlainObj = require('is-plain-obj');
 const Observable = require('zen-observable');
 const once = require('once');
-const rimraf = require('rimraf');
+const {rimraf} = require('rimraf');
 const spawnStack = require('../spawn-stack/index.js');
 
 const downloadPurescriptSource = require('../download-purescript-source/index.js');
@@ -102,7 +102,7 @@ module.exports = function buildPurescript(...args) {
 		}
 
 		const spawnOptions = {cwd: null, ...options};
-		const cleanupSourceDir = (cb = () => {}) => spawnOptions.cwd ? rimraf(spawnOptions.cwd, {glob: false}, cb) : cb();
+		const cleanupSourceDir = (cb = () => {}) => spawnOptions.cwd ? rimraf(spawnOptions.cwd).then(() => cb(), () => cb()) : cb();
 
 		const sendError = once((err, id) => {
 			if (id) {
