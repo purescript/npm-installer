@@ -11,6 +11,7 @@ const isPrettyMode = process.stdout && process.stdout.isTTY && !/^1|true$/ui.tes
 chalk.enabled = chalk.enabled && isPrettyMode;
 
 const filesize = require('filesize');
+const cacache = require('cacache');
 const logUpdate = require('log-update');
 const logSymbols = require('log-symbols');
 const minimist = require('minimist');
@@ -154,7 +155,7 @@ const taskGroups = [
 		[
 			'write-cache',
 			{
-				head: 'Save the downloaded binary to the local cache directory',
+				head: 'Save the downloaded binary to the npm cache directory',
 				allowFailure: true
 			}
 		]
@@ -190,7 +191,7 @@ const taskGroups = [
 		[
 			'write-cache',
 			{
-				head: 'Save the built binary to the local cache directory',
+				head: 'Save the built binary to the npm cache directory',
 				allowFailure: true
 			}
 		]
@@ -202,7 +203,7 @@ const spinnerFrames = [4, 18, 50, 49, 53, 45, 31, 32, 0, 8].map(code => String.f
 let time = Date.now();
 let frame = 0;
 let loop = 0;
-let cacheInfo = {};
+let cacheWritten = false;
 const render = isPrettyMode ? () => {
 	const lines = [];
 
@@ -407,7 +408,7 @@ installPurescript({
 			}
 
 			if (event.id === 'write-cache:complete') {
-				cacheInfo = event;
+				cacheWritten = true;
 			}
 
 			render();
@@ -487,8 +488,10 @@ installPurescript({
 			console.log();
 		}
 
-		const {size: bytes} = await promisify(stat)(path);
-		const {path: cachePath, size: cacheBytes} = cacheInfo;
+		const [{size: bytes}, {path: cachePath, size: cacheBytes}] = await Promise.all([
+			promisify(stat)(path),
+			cacheWritten ? cacache.get.info(installPurescript.defaultCacheRootDir, installPurescript.cacheKey) : {}
+		]);
 
 		console.log(`Installed to ${magenta(path)} ${dim(filesize(bytes, filesizeOptions))}`);
 

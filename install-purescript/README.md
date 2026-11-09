@@ -59,7 +59,7 @@ When the `Observable` is [subscribe](https://tc39.github.io/proposal-observable/
 1. it searches [the standard cache directory](https://github.com/shinnn/app-cache-dir) for an already cached PureScript binary, and restores the cache if available
 3. if a cached binary is not available, it downloads a prebuilt binary from the [PureScript release page](https://github.com/purescript/purescript/releases)
 4. if a prebuilt binary is not available, it downloads [the PureScript source code](https://github.com/purescript/purescript) and [builds](https://github.com/purescript/purescript/blob/master/INSTALL.md#compiling-from-source) a binary form it
-5. Cache the downloaded or built binary by version and platform in the [local binary cache](../README.md#installation)
+5. Cache the downloaded or built binary to the [npm cache directory](https://docs.npmjs.com/files/folders#cache)
 
 while successively sending [events](#events) to its [`Observer`](https://github.com/tc39/proposal-observable#observer).
 

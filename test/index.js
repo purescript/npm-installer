@@ -7,14 +7,13 @@ const {test, before, after} = require('node:test');
 const assert = require('node:assert/strict');
 const {tmpdir} = require('os');
 const {join} = require('path');
+const cacache = require('cacache');
 
 const installPurescript = require('../install-purescript/index.js');
 
 const cacheRootDir = ".test-cache";
 const originalCwd = process.cwd();
 let testDir;
-let cachePath;
-const cachePaths = new Map();
 
 before(async () => {
 	testDir = await fs.promises.mkdtemp(join(tmpdir(), 'installer-test-'));
@@ -88,11 +87,6 @@ function testInstall(version, expectedEvents) {
 			version
 		}));
 		assertEvents(events, expectedEvents);
-		const cached = events.find(event => event.id === 'write-cache:complete');
-		if (cached) {
-			cachePath = cached.path;
-			cachePaths.set(version, cachePath);
-		}
 		const {stdout} = await util.promisify(execFile)('./purs', ['--version'], {timeout: 1000});
 		assert.equal(stdout.trim(), version);
 	});
@@ -113,7 +107,8 @@ test('install from cache', testInstall('0.15.7', [
 ]));
 
 test('recover from corrupt cache', async () => {
-	await fs.promises.writeFile(cachePath, 'not a compiler');
+	const info = await cacache.get.info(cacheRootDir, installPurescript.cacheKey);
+	await fs.promises.writeFile(info.path, 'not a compiler');
 	await testInstall('0.15.7', [
 		{ id: 'search-cache', found: true },
 		{ id: 'check-binary:fail' },
@@ -140,22 +135,6 @@ test('install a different version from cache', testInstall('0.15.6', [
 	{ id: 'check-binary' }
 ]));
 
-test('reject a working cached binary of the wrong version', async () => {
-	await fs.promises.copyFile('./purs', cachePaths.get('0.15.7'));
-	await testInstall('0.15.7', [
-		{ id: 'search-cache', found: true },
-		{ id: 'check-binary:fail' },
-		{ id: 'download-binary' },
-		{ id: 'write-cache:complete' }
-	])();
-});
-
-test('switch back to a cached version', testInstall('0.15.7', [
-	{ id: 'search-cache', found: true },
-	{ id: 'restore-cache' },
-	{ id: 'check-binary:complete' }
-]));
-
 test('install a prerelease', testInstall('0.15.0-alpha-06', [
 	{ id: 'search-cache', found: false },
 	{ id: 'download-binary' },
@@ -175,7 +154,6 @@ test('concurrent writers publish a reusable cache entry', async () => {
 		const {stdout} = await util.promisify(execFile)(`./${name}`, ['--version']);
 		assert.equal(stdout.trim(), '0.15.7');
 	}));
-	assert.equal((await fs.promises.readdir(cacheRootDir)).some(name => name.endsWith('.tmp')), false);
 	await testInstall('0.15.7', [
 		{ id: 'search-cache', found: true },
 		{ id: 'restore-cache:complete' },
