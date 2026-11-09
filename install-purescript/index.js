@@ -5,7 +5,7 @@ const { execFile } = require('child_process');
 const path = require('path');
 const { inspect, promisify } = require('util');
 const { pipeline: pump } = require('stream');
-const cacache = require('cacache');
+const {createHash, randomUUID} = require('crypto');
 const isPlainObj = require('is-plain-obj');
 const Observable = require('zen-observable');
 const envPaths = require('env-paths');
@@ -22,8 +22,7 @@ function addId(obj, id) {
 	return obj;
 }
 
-const defaultCacheRootDir = envPaths('purescript-npm-installer').cache;
-const CACHE_KEY = 'install-purescript:binary';
+const defaultCacheRootDir = path.join(envPaths('purescript-npm-installer').cache, 'binaries-v1');
 const defaultBinName = `purs${process.platform === 'win32' ? '.exe' : ''}`;
 const cacheIdSuffix = `-${getBuildProfile()}`;
 
@@ -67,45 +66,29 @@ module.exports = function installPurescript(...args) {
 		const binPath = path.join(cwd, binName);
 		const cacheId = `${options.version || downloadOrBuildPurescript.defaultVersion}${cacheIdSuffix}`;
 		const cacheRootDir = typeof options.cacheRootDir === 'string' ? options.cacheRootDir : defaultCacheRootDir;
+		const cachePath = path.join(cacheRootDir, createHash('sha256').update(cacheId).digest('hex'));
 
-		function main({brokenCacheFound = false} = {}) {
-			const cacheCleaning = (async () => {
-				if (brokenCacheFound) {
-					try {
-						await cacache.rm.entry(cacheRootDir, CACHE_KEY);
-					} catch(_) {}
-				}
-
-				try {
-					await cacache.verify(cacheRootDir);
-				} catch(_) {}
-			})();
-
+		function main() {
 			subscriptions.add(downloadOrBuildPurescript(options).subscribe({
 				next(val) {
 					observer.next(val);
 				},
-				async error(err) {
-					await cacheCleaning;
+				error(err) {
 					observer.error(err);
 				},
 				async complete() {
 					observer.next({id: 'write-cache'});
+					const temporaryPath = `${cachePath}.${randomUUID()}.tmp`;
+					let size;
 
 					try {
-						await cacheCleaning;
-						const binStat = await promisify(fs.lstat)(binPath);
-						const cacheStream = cacache.put.stream(cacheRootDir, CACHE_KEY, {
-							size: binStat.size,
-							metadata: {
-								id: cacheId,
-								mode: binStat.mode
-							}
-						});
-						await promisify(pump)(
-							fs.createReadStream(binPath),
-							cacheStream);
+						await fs.promises.mkdir(cacheRootDir, {recursive: true});
+						await fs.promises.copyFile(binPath, temporaryPath);
+						({size} = await fs.promises.stat(temporaryPath));
+						// Publish only a complete binary; concurrent writers use distinct temporary files.
+						await fs.promises.rename(temporaryPath, cachePath);
 					} catch (err) {
+						await fs.promises.rm(temporaryPath, {force: true}).catch(() => {});
 						observer.next({
 							id: 'write-cache:fail',
 							error: addId(err, 'write-cache')
@@ -115,7 +98,7 @@ module.exports = function installPurescript(...args) {
 						return;
 					}
 
-					observer.next({id: 'write-cache:complete'});
+					observer.next({id: 'write-cache:complete', path: cachePath, size});
 					observer.complete();
 				}
 			}));
@@ -133,7 +116,10 @@ module.exports = function installPurescript(...args) {
 			};
 
 			const [info] = await Promise.all([
-				cacache.get.info(cacheRootDir, CACHE_KEY),
+				fs.promises.stat(cachePath).catch(err => {
+					if (err.code === 'ENOENT') return null;
+					throw err;
+				}),
 				(async () => {
 					let binStat;
 					try {
@@ -167,17 +153,9 @@ module.exports = function installPurescript(...args) {
 				return;
 			}
 
-			const id = info.metadata.id;
-			const cachePath = info.path;
-			const binMode = info.metadata.mode;
+			const binMode = info.mode;
 
 			if (observer.closed) {
-				return;
-			}
-
-			if (id !== cacheId) {
-				observer.next(searchCacheValue);
-				main({brokenCacheFound: true});
 				return;
 			}
 
@@ -198,7 +176,7 @@ module.exports = function installPurescript(...args) {
 					error: addId(err, 'restore-cache')
 				});
 
-				main({brokenCacheFound: true});
+				main();
 				return;
 			}
 
@@ -206,30 +184,29 @@ module.exports = function installPurescript(...args) {
 			observer.next({id: 'check-binary'});
 
 			try {
-				await promisify(execFile)(binPath, ['--version'], {timeout: 8000, ...options});
+				const {stdout} = await promisify(execFile)(binPath, ['--version'], {timeout: 8000, ...options});
+				if (stdout.trim() !== (options.version || downloadOrBuildPurescript.defaultVersion)) {
+					throw new Error('Cached compiler version does not match the requested version.');
+				}
 			} catch (err) {
 				observer.next({
 					id: 'check-binary:fail',
 					error: addId(err, 'check-binary')
 				});
 
-				main({brokenCacheFound: true});
+				main();
 				return;
 			}
 
 			observer.next({id: 'check-binary:complete'});
 			observer.complete();
-		})();
+		})().catch(err => observer.error(err));
 
 		return cancelInstallation;
 	});
 };
 
 Object.defineProperties(module.exports, {
-	cacheKey: {
-		enumerable: true,
-		value: CACHE_KEY
-	},
 	defaultCacheRootDir: {
 		enumerable: true,
 		value: defaultCacheRootDir

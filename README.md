@@ -10,6 +10,21 @@ A command-line tool to install [PureScript](https://github.com/purescript/puresc
 
 ## Installation
 
+Requires Node.js `^22.19.0 || >=24.0.0`, including the supported Node 22, 24
+and 26 LTS lines. Node 20 reached EOL on April 30, 2026 and is no longer
+supported. Undici requires at least Node 22.19.0. This is a breaking change
+from 0.3.6's `^20.17.0 || >=22.9.0` range (and the earlier `>=12` range);
+publish it as a breaking release, not a patch selected by older wrappers.
+
+Downloads honor `HTTP_PROXY`, `HTTPS_PROXY` and `NO_PROXY` (and their
+lowercase equivalents), follow redirects and retry transient failures.
+Compiler binaries are cached separately by version and platform in a new
+`binaries-v1` directory. Old cacache entries are left untouched and are not
+reused. Cache writes use atomic replacement; restored binaries must execute
+and report the requested version. Cache-write failures do not prevent an
+otherwise successful installation. Cached versions remain until the cache
+directory is removed.
+
 [Use](https://docs.npmjs.com/cli/install) [npm](https://docs.npmjs.com/about-npm/).
 
 ```
@@ -50,6 +65,25 @@ Also, these flags are passed to `stack install` command if provided:
 ```
 
 ## Developer Guide
+
+Install the recorded dependency tree with `npm ci --engine-strict`, then run
+`npm audit` and `npm test`. Tests use Node's built-in runner and strict
+assertions with a 60-second timeout, including real compiler installations
+and local HTTP/proxy fixtures. No warnings or audit findings are suppressed.
+There is no JavaScript build step; building PureScript from source separately
+requires Stack and its Haskell toolchain.
+
+The glob/minimatch dependency paths have been removed rather than overridden:
+downloads use Undici, binary caching and cleanup use Node's filesystem APIs,
+and tests no longer depend on tap. Before releasing, run `npm pack`, install
+the tarball in a fresh consumer without overrides, run `npm audit` and
+`npm ls --all`, and exercise the installed `install-purescript` command.
+
+The stable compiler versions in the integration tests reuse
+[PR #42](https://github.com/purescript/npm-installer/pull/42), retaining the
+prerelease case. [PR #39](https://github.com/purescript/npm-installer/pull/39)
+was already superseded by the merged make-fetch-happen 15 upgrade; this
+modernization removes that dependency entirely.
 
 If you'd like to contribute to this project, here are instructions for testing your changes locally:
 

@@ -15,13 +15,34 @@ defaults:
 jobs:
   build:
     runs-on: "ubuntu-latest"
+    strategy:
+      matrix:
+        node: ["22.19.0", "24.0.0", "24.x", "26.x"]
     steps:
-      - uses: "actions/checkout@v3"
+      - uses: "actions/checkout@v6"
 
-      - uses: "actions/setup-node@v3"
+      - uses: "actions/setup-node@v6"
         with:
-          node-version: "14.x"
+          node-version: "${{ matrix.node }}"
 
-      - run: npm install --ignore-scripts --no-fund
+      - run: npm ci --engine-strict --no-fund
 
-      - run: npm test -- --no-check-coverage --timeout=60
+      - run: npm audit
+
+      - run: npm test
+
+      - name: Verify the published dependency tree and CLI
+        run: |
+          tmp=$(mktemp -d)
+          trap 'rm -rf "$tmp"' EXIT
+          npm pack --pack-destination "$tmp"
+          npm install --prefix "$tmp/consumer" --engine-strict --no-fund "$tmp"/*.tgz
+          npm audit --prefix "$tmp/consumer"
+          npm ls --prefix "$tmp/consumer" --all
+          for attempt in 1 2; do
+            (
+              cd "$tmp/consumer"
+              XDG_CACHE_HOME="$tmp/cache" node node_modules/purescript-installer/index.js --purs-ver 0.15.7
+              test "$(./purs --version)" = 0.15.7
+            )
+          done
