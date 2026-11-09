@@ -25,7 +25,8 @@ jobs:
         with:
           node-version: "${{ matrix.node }}"
 
-      - run: npm ci --engine-strict --no-fund
+      # Generate an ignored lockfile for npm audit, resolving ranges afresh.
+      - run: npm install --engine-strict --no-fund --package-lock
 
       - run: npm audit
 
@@ -36,7 +37,7 @@ jobs:
           tmp=$(mktemp -d)
           trap 'rm -rf "$tmp"' EXIT
           npm pack --pack-destination "$tmp"
-          npm install --prefix "$tmp/consumer" --engine-strict --no-fund "$tmp"/*.tgz
+          npm install --prefix "$tmp/consumer" --engine-strict --no-fund --package-lock "$tmp"/*.tgz
           npm audit --prefix "$tmp/consumer"
           npm ls --prefix "$tmp/consumer" --all
           for attempt in 1 2; do
