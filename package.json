@@ -6,11 +6,11 @@
     "install-purescript": "index.js"
   },
   "engines": {
-    "node": "^22.19.0 || >=24.0.0"
+    "node": "^22.22.2 || ^24.15.0 || >=26.0.0"
   },
   "dependencies": {
     "byline": "^5.0.0",
-    "cacache": "^20.0.0",
+    "cacache": "^21.0.2",
     "chalk": "^2.4.2",
     "env-paths": "^2.2.0",
     "execa": "^2.0.3",
