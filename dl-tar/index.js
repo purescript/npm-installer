@@ -2,13 +2,13 @@
 
 const {inspect} = require('util');
 const {resolve} = require('path');
-const {Transform} = require('stream');
+const {Readable, Transform} = require('stream');
 const {promises: fs} = require('fs');
 
 const cancelablePump = require('../cancelable-pump/index.js');
 const {Unpack} = require('tar');
 const isPlainObj = require('is-plain-obj');
-const fetch = require('make-fetch-happen');
+const {fetch, EnvHttpProxyAgent, RetryAgent} = require('undici');
 const Observable = require('zen-observable');
 
 class InternalUnpack extends Unpack {
@@ -167,6 +167,8 @@ module.exports = function dlTar(...args) {
 		const absoluteDest = resolve(cwd, dest);
 		let ended = false;
 		let cancel;
+		const controller = new AbortController();
+		const dispatcher = new RetryAgent(new EnvHttpProxyAgent());
 
 		(async () => {
 			try {
@@ -187,9 +189,10 @@ module.exports = function dlTar(...args) {
 				const {baseUrl, headers} = options;
 				const {href} = new URL(url, baseUrl);
 
-				const res = await fetch(href, {headers}).then(response => {
+				const res = await fetch(href, {headers, dispatcher, signal: controller.signal}).then(async response => {
 
 					if (response.ok !== true) {
+						await response.body.cancel();
 						throw new Error(`${response.status} ${response.statusText}`);
 					}
 
@@ -201,7 +204,7 @@ module.exports = function dlTar(...args) {
 				});
 
 				const pipe = [
-					res.body,
+					Readable.fromWeb(res.body),
 					new Transform({
 						transform(chunk, encoding, cb) {
 							unpackStream.responseBytes += chunk.length;
@@ -228,6 +231,8 @@ module.exports = function dlTar(...args) {
 		})();
 
 		return function cancelExtract() {
+			controller.abort();
+			dispatcher.destroy().catch(() => {});
 			if (!cancel) {
 				ended = true;
 				return;

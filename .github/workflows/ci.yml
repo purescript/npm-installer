@@ -15,13 +15,35 @@ defaults:
 jobs:
   build:
     runs-on: "ubuntu-latest"
+    strategy:
+      matrix:
+        node: ["22.22.2", "22.x", "24.15.0", "24.x", "26.0.0", "26.x"]
     steps:
-      - uses: "actions/checkout@v3"
+      - uses: "actions/checkout@v6"
 
-      - uses: "actions/setup-node@v3"
+      - uses: "actions/setup-node@v6"
         with:
-          node-version: "14.x"
+          node-version: "${{ matrix.node }}"
 
-      - run: npm install --ignore-scripts --no-fund
+      # Generate an ignored lockfile for npm audit, resolving ranges afresh.
+      - run: npm install --engine-strict --no-fund --package-lock
 
-      - run: npm test -- --no-check-coverage --timeout=60
+      - run: npm audit
+
+      - run: npm test
+
+      - name: Verify the published dependency tree and CLI
+        run: |
+          tmp=$(mktemp -d)
+          trap 'rm -rf "$tmp"' EXIT
+          npm pack --pack-destination "$tmp"
+          npm install --prefix "$tmp/consumer" --engine-strict --no-fund --package-lock "$tmp"/*.tgz
+          npm audit --prefix "$tmp/consumer"
+          npm ls --prefix "$tmp/consumer" --all
+          for attempt in 1 2; do
+            (
+              cd "$tmp/consumer"
+              XDG_CACHE_HOME="$tmp/cache" node node_modules/purescript-installer/index.js --purs-ver 0.15.7
+              test "$(./purs --version)" = 0.15.7
+            )
+          done

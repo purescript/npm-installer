@@ -3,17 +3,26 @@
 const fs = require('fs');
 const {execFile} = require('child_process');
 const util = require('util');
-const tap = require('tap');
-const {rimrafSync} = require('rimraf');
+const {test, before, after} = require('node:test');
+const assert = require('node:assert/strict');
+const {tmpdir} = require('os');
+const {join} = require('path');
+const cacache = require('cacache');
 
 const installPurescript = require('../install-purescript/index.js');
 
 const cacheRootDir = ".test-cache";
+const originalCwd = process.cwd();
+let testDir;
 
-// Set a timeout of 60s (default is 30s)
-tap.setTimeout(1000 * 60);
-
-rimrafSync(cacheRootDir);
+before(async () => {
+	testDir = await fs.promises.mkdtemp(join(tmpdir(), 'installer-test-'));
+	process.chdir(testDir);
+});
+after(async () => {
+	process.chdir(originalCwd);
+	await fs.promises.rm(testDir, {recursive: true, force: true});
+});
 
 // Given an installPurescript observable, return a promise which resolves to a
 // summary of the events which occurred during installation (i.e. without
@@ -40,7 +49,7 @@ function summarizeEvents(observable) {
 	});
 };
 
-function assertEvents(t, _found, _expected) {
+function assertEvents(_found, _expected) {
 	const found = _found.slice();
 	const expected = _expected.slice();
 
@@ -48,15 +57,13 @@ function assertEvents(t, _found, _expected) {
 		const next = found.shift();
 		if (next.id == expected[0].id) {
 			const nextExpected = expected.shift();
-			t.match(next, nextExpected, "received " + next.id + " event");
+			for (const [key, value] of Object.entries(nextExpected)) {
+				assert.deepEqual(next[key], value, `received ${next.id} event: ${key}`);
+			}
 		}
 	}
 
-	if (expected.length > 0) {
-		t.fail("expected the following events, but did not receive them: " + expected.map(x => x.id).join(", "));
-	} else {
-		t.ok(true, "received all expected events")
-	}
+	assert.deepEqual(expected, [], 'received all expected events');
 }
 
 // return a promise which resolves once the given file has been unlinked,
@@ -64,7 +71,7 @@ function assertEvents(t, _found, _expected) {
 // place).
 async function unlinkIfExists(path) {
 	try {
-		await util.promisify(fs.unlink)('./purs');
+		await fs.promises.unlink(path);
 	} catch(err) {
 		if (err.code !== 'ENOENT') {
 			throw err;
@@ -73,47 +80,95 @@ async function unlinkIfExists(path) {
 }
 
 function testInstall(version, expectedEvents) {
-	return (async t => {
+	return (async () => {
 		await unlinkIfExists('./purs');
 		const events = await summarizeEvents(installPurescript({
 			cacheRootDir,
 			version
 		}));
-		assertEvents(t, events, expectedEvents);
+		assertEvents(events, expectedEvents);
 		const {stdout} = await util.promisify(execFile)('./purs', ['--version'], {timeout: 1000});
-		t.match(stdout.toString(), version);
+		assert.equal(stdout.trim(), version);
 	});
 }
 
-tap.test('clean install', testInstall('0.13.0', [
+// Stable release versions from PR #42; keep the prerelease case below as well.
+test('clean install', testInstall('0.15.7', [
 	{ id: 'search-cache', found: false },
 	{ id: 'download-binary' },
 	{ id: 'check-binary' },
-	{ id: 'write-cache' }
+	{ id: 'write-cache:complete' }
 ]));
 
-tap.test('install from cache', testInstall('0.13.0', [
+test('install from cache', testInstall('0.15.7', [
 	{ id: 'search-cache', found: true },
 	{ id: 'restore-cache' },
 	{ id: 'check-binary' }
 ]));
 
-tap.test('install a different version', testInstall('0.12.5', [
+test('recover from corrupt cache', async () => {
+	const info = await cacache.get.info(cacheRootDir, installPurescript.cacheKey);
+	await fs.promises.writeFile(info.path, 'not a compiler');
+	await testInstall('0.15.7', [
+		{ id: 'search-cache', found: true },
+		{ id: 'check-binary:fail' },
+		{ id: 'download-binary' },
+		{ id: 'write-cache:complete' }
+	])();
+	await testInstall('0.15.7', [
+		{ id: 'search-cache', found: true },
+		{ id: 'restore-cache:complete' },
+		{ id: 'check-binary:complete' }
+	])();
+});
+
+test('install a different version', testInstall('0.15.6', [
 	{ id: 'search-cache', found: false },
 	{ id: 'download-binary' },
 	{ id: 'check-binary' },
-	{ id: 'write-cache' }
+	{ id: 'write-cache:complete' }
 ]));
 
-tap.test('install a different version from cache', testInstall('0.12.5', [
+test('install a different version from cache', testInstall('0.15.6', [
 	{ id: 'search-cache', found: true },
 	{ id: 'restore-cache' },
 	{ id: 'check-binary' }
 ]));
 
-tap.test('clean install', testInstall('0.15.0-alpha-06', [
+test('install a prerelease', testInstall('0.15.0-alpha-06', [
 	{ id: 'search-cache', found: false },
 	{ id: 'download-binary' },
 	{ id: 'check-binary' },
-	{ id: 'write-cache' }
+	{ id: 'write-cache:complete' }
 ]));
+
+test('concurrent writers publish a reusable cache entry', async () => {
+	await Promise.all(['purs-a', 'purs-b'].map(async name => {
+		const events = await summarizeEvents(installPurescript({
+			cacheRootDir,
+			version: '0.15.7',
+			forceReinstall: true,
+			rename: () => name
+		}));
+		assertEvents(events, [{id: 'write-cache:complete'}]);
+		const {stdout} = await util.promisify(execFile)(`./${name}`, ['--version']);
+		assert.equal(stdout.trim(), '0.15.7');
+	}));
+	await testInstall('0.15.7', [
+		{ id: 'search-cache', found: true },
+		{ id: 'restore-cache:complete' },
+		{ id: 'check-binary:complete' }
+	])();
+});
+
+test('cache write failure does not fail installation', async () => {
+	await fs.promises.writeFile('blocked-cache', 'not a directory');
+	const events = await summarizeEvents(installPurescript({
+		cacheRootDir: 'blocked-cache',
+		version: '0.15.7',
+		forceReinstall: true
+	}));
+	assertEvents(events, [{id: 'write-cache:fail'}]);
+	const {stdout} = await util.promisify(execFile)('./purs', ['--version']);
+	assert.equal(stdout.trim(), '0.15.7');
+});
